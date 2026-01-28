@@ -188,6 +188,11 @@ export default function ClientsPage() {
                               ? `${client.firstName} ${client.lastName}`
                               : client.companyName}
                           </p>
+                          {client.document && (
+      <p className="text-sm text-gray-500">
+        CI: {client.document}
+      </p>
+    )}
                           {client.rif && (
                             <p className="text-sm text-gray-500">{client.rif}</p>
                           )}

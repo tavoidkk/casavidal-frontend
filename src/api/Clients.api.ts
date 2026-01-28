@@ -13,6 +13,7 @@ interface CreateClientData {
   clientType: 'NATURAL' | 'JURIDICO';
   firstName?: string;
   lastName?: string;
+  document?: string;
   companyName?: string;
   rif?: string;
   email?: string;
