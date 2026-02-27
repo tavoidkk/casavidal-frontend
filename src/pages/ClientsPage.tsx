@@ -189,10 +189,10 @@ export default function ClientsPage() {
                               : client.companyName}
                           </p>
                           {client.document && (
-      <p className="text-sm text-gray-500">
-        CI: {client.document}
-      </p>
-    )}
+                              <p className="text-sm text-gray-500">
+                                {client.document}
+                              </p>
+                            )}
                           {client.rif && (
                             <p className="text-sm text-gray-500">{client.rif}</p>
                           )}

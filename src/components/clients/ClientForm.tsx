@@ -226,13 +226,13 @@ console.log('🔍 Form State:', {
         <>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nombre *"
+              label="Nombre"
               {...register('firstName')}
               error={errors.firstName?.message}
               placeholder="Juan"
             />
             <Input
-              label="Apellido *"
+              label="Apellido"
               {...register('lastName')}
               error={errors.lastName?.message}
               placeholder="Pérez"
@@ -241,7 +241,7 @@ console.log('🔍 Form State:', {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cédula de Identidad *
+              Cédula de Identidad 
             </label>
             <div className="flex gap-2">
               <select
