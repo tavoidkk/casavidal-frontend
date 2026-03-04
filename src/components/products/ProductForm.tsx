@@ -47,7 +47,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     reset,
     formState: { errors },
   } = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(productSchema) as any,
     defaultValues: {
       name: '',
       description: '',

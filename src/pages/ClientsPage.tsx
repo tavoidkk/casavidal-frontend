@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, Star } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Star } from 'lucide-react';
 import { clientsApi } from '../api/Clients.api'
 import type { Client } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ClientForm } from '../components/clients/ClientForm';

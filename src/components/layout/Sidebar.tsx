@@ -3,6 +3,8 @@ import {
   LayoutDashboard, 
   Users, 
   Package,
+  ShoppingCart,
+  ClipboardList,
   LogOut 
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
@@ -11,6 +13,8 @@ const menuItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clientes' },
   { to: '/products', icon: Package, label: 'Productos' },
+  { to: '/sales', icon: ShoppingCart, label: 'Ventas' },
+  { to: '/special-orders', icon: ClipboardList, label: 'Pedidos Especiales' },
 ];
 
 export default function Sidebar() {

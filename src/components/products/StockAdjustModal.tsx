@@ -45,7 +45,8 @@ export const StockAdjustModal: React.FC<StockAdjustModalProps> = ({
     reset,
     formState: { errors },
   } = useForm<AdjustFormData>({
-    resolver: zodResolver(adjustSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(adjustSchema) as any,
     defaultValues: {
       quantity: 1,
       type: 'ENTRADA',
