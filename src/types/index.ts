@@ -78,6 +78,17 @@ export interface Product {
   hasVariants: boolean;
   variantInfo?: string;
   createdAt: string;
+  productSuppliers?: Array<{
+    id: string;
+    supplierId: string;
+    supplierPrice: number;
+    isPreferred: boolean;
+    supplier: {
+      id: string;
+      name: string;
+      rif?: string;
+    };
+  }>;
 }
 
 // Respuestas de API
@@ -229,4 +240,58 @@ export interface TopClient {
   totalPurchases: number;
   purchaseCount: number;
   loyaltyPoints: number;
+}
+
+// Notification
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'VENTA' | 'PEDIDO' | 'INVENTARIO' | 'SISTEMA';
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// Activity
+export type ActivityType = 'LLAMADA' | 'EMAIL' | 'REUNION' | 'NOTA' | 'TAREA' | 'SEGUIMIENTO';
+
+export interface Activity {
+  id: string;
+  clientId: string;
+  userId: string;
+  type: ActivityType;
+  title: string;
+  description?: string;
+  scheduledFor?: string;
+  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  createdAt: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+  client?: {
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    clientType: 'NATURAL' | 'JURIDICO';
+  };
+}
+
+export interface ActivityCreate {
+  clientId: string;
+  type: ActivityType;
+  title: string;
+  description?: string;
+  scheduledFor?: string;
+}
+
+export interface ActivityUpdate {
+  title?: string;
+  description?: string;
+  type?: ActivityType;
+  scheduledFor?: string;
+  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
 }

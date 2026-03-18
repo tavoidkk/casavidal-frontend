@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Plus, Minus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { clientsApi } from '../../api/Clients.api';
 import { productsApi } from '../../api/products.api';
@@ -47,7 +46,6 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
   const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   const [items, setItems] = useState<SaleLineItem[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<CreateSaleInput['paymentMethod']>('EFECTIVO');
   const [notes, setNotes] = useState('');
 
@@ -71,22 +69,23 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
     return () => clearTimeout(t);
   }, [clientSearch]);
 
-  // Buscar productos
-  useEffect(() => {
-    if (!productSearch.trim() || productSearch.length < 2) {
+  // Buscar productos (o cargar todos cuando no hay texto)
+  const loadProducts = useCallback(async (query: string) => {
+    try {
+      const res = await productsApi.getAll({ search: query || undefined, limit: 20 });
+      setProductResults(res.data.filter((p) => p.currentStock > 0));
+    } catch {
       setProductResults([]);
-      return;
     }
-    const t = setTimeout(async () => {
-      try {
-        const res = await productsApi.getAll({ search: productSearch, limit: 8 });
-        setProductResults(res.data.filter((p) => p.currentStock > 0));
-      } catch {
-        setProductResults([]);
-      }
-    }, 300);
+  }, []);
+
+  useEffect(() => {
+    if (!productSearch.trim()) {
+      return; // si no hay texto, los resultados se cargan en onFocus
+    }
+    const t = setTimeout(() => loadProducts(productSearch), 300);
     return () => clearTimeout(t);
-  }, [productSearch]);
+  }, [productSearch, loadProducts]);
 
   // Cerrar dropdowns al hacer clic fuera
   useEffect(() => {
@@ -106,7 +105,6 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
     setSelectedClient(null);
     setClientSearch('');
     setItems([]);
-    setDiscount(0);
     setPaymentMethod('EFECTIVO');
     setNotes('');
     setProductSearch('');
@@ -159,7 +157,7 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.subtotal, 0);
-  const total = Math.max(0, subtotal - discount);
+  const total = subtotal;
 
   const handleSubmit = async () => {
     if (!selectedClient) {
@@ -174,7 +172,6 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
     await onSubmit({
       clientId: selectedClient.id,
       items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
-      discount: discount || undefined,
       paymentMethod,
       notes: notes || undefined,
     });
@@ -249,7 +246,10 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
                 setProductSearch(e.target.value);
                 setShowProductDropdown(true);
               }}
-              onFocus={() => setShowProductDropdown(true)}
+              onFocus={() => {
+                setShowProductDropdown(true);
+                if (!productSearch.trim()) loadProducts('');
+              }}
               placeholder="Buscar por nombre, SKU o código de barras..."
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
@@ -338,25 +338,13 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
         )}
 
         {/* Totales y pago */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Select
-              label="Método de Pago *"
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as CreateSaleInput['paymentMethod'])}
-              options={PAYMENT_METHODS}
-            />
-          </div>
-          <div>
-            <Input
-              label="Descuento ($)"
-              type="number"
-              min={0}
-              value={discount || ''}
-              onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-              placeholder="0.00"
-            />
-          </div>
+        <div>
+          <Select
+            label="Método de Pago *"
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as CreateSaleInput['paymentMethod'])}
+            options={PAYMENT_METHODS}
+          />
         </div>
 
         <div>
@@ -372,17 +360,7 @@ export const CreateSaleModal: React.FC<CreateSaleModalProps> = ({
 
         {/* Resumen de totales */}
         <div className="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
-          <div className="flex justify-between text-gray-600">
-            <span>Subtotal</span>
-            <span>${subtotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
-          </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Descuento</span>
-              <span>-${discount.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
-            </div>
-          )}
-          <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2 text-gray-900">
+          <div className="flex justify-between font-bold text-lg text-gray-900">
             <span>TOTAL</span>
             <span>${total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
           </div>

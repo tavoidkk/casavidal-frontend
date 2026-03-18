@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Star } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Star, Eye } from 'lucide-react';
 import { clientsApi } from '../api/Clients.api'
 import type { Client } from '../types';
 import { Card } from '../components/ui/Card';
@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ClientForm } from '../components/clients/ClientForm';
+import { ClientDetailModal } from '../components/clients/ClientDetailModal';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -16,6 +17,8 @@ export default function ClientsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [clientForDetail, setClientForDetail] = useState<Client | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -231,6 +234,16 @@ export default function ClientsPage() {
                         <div className="flex justify-end space-x-2">
                           <button
                             onClick={() => {
+                              setClientForDetail(client);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                            title="Ver Detalle"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
                               setSelectedClient(client);
                               setIsModalOpen(true);
                             }}
@@ -304,6 +317,18 @@ export default function ClientsPage() {
           isLoading={isSubmitting}
         />
       </Modal>
+
+      {/* Modal de Detalle del Cliente con Timeline */}
+      {clientForDetail && (
+        <ClientDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setClientForDetail(null);
+          }}
+          client={clientForDetail}
+        />
+      )}
     </div>
   );
 }

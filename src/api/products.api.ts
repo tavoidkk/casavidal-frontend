@@ -96,4 +96,21 @@ export const productsApi = {
     const { data } = await api.get<ApiResponse<Category[]>>('/categories');
     return data.data;
   },
+
+  upsertSupplier: async (
+    productId: string,
+    supplierId: string,
+    supplierPrice: number,
+    isPreferred: boolean
+  ) => {
+    const { data } = await api.post<ApiResponse<unknown>>(
+      `/products/${productId}/supplier`,
+      { supplierId, supplierPrice, isPreferred }
+    );
+    return data.data;
+  },
+
+  removeSupplier: async (productId: string, supplierId: string) => {
+    await api.delete(`/products/${productId}/supplier/${supplierId}`);
+  },
 };

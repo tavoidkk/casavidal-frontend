@@ -4,7 +4,9 @@ import {
   Users, 
   Package,
   ShoppingCart,
+  Activity,
   ClipboardList,
+  Truck,
   LogOut 
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
@@ -14,7 +16,9 @@ const menuItems = [
   { to: '/clients', icon: Users, label: 'Clientes' },
   { to: '/products', icon: Package, label: 'Productos' },
   { to: '/sales', icon: ShoppingCart, label: 'Ventas' },
+  { to: '/crm', icon: Activity, label: 'CRM' },
   { to: '/special-orders', icon: ClipboardList, label: 'Pedidos Especiales' },
+  { to: '/suppliers', icon: Truck, label: 'Proveedores' },
 ];
 
 export default function Sidebar() {

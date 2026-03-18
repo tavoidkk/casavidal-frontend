@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, ShoppingCart, Eye } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Eye, Download } from 'lucide-react';
 import { salesApi } from '../api/sales.api';
 import type { Sale } from '../types';
 import { Card } from '../components/ui/Card';
@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { CreateSaleModal } from '../components/sales/CreateSaleModal';
 import { useAuthStore } from '../store/auth.store';
 import type { CreateSaleInput } from '../api/sales.api';
+import { generateInvoicePDF } from '../utils/generateInvoice';
 
 const PAYMENT_LABELS: Record<string, string> = {
   EFECTIVO: '💵 Efectivo',
@@ -59,14 +60,26 @@ export default function SalesPage() {
   const handleCreateSale = async (data: CreateSaleInput) => {
     setIsSubmitting(true);
     try {
-      await salesApi.create(data);
+      const createdSale = await salesApi.create(data);
       setIsCreateOpen(false);
       loadSales();
+      // Generar factura automáticamente
+      if (createdSale) generateInvoicePDF(createdSale);
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string; message?: string } } };
       alert(axiosError.response?.data?.error || axiosError.response?.data?.message || 'Error al registrar venta');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadInvoice = async (sale: Sale) => {
+    try {
+      // Obtener datos completos (con unit de producto) si el ítem no lo trae
+      const full = await salesApi.getById(sale.id);
+      generateInvoicePDF(full);
+    } catch {
+      generateInvoicePDF(sale);
     }
   };
 
@@ -163,16 +176,9 @@ export default function SalesPage() {
                         {PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div>
-                          <p className="font-bold text-gray-900">
-                            ${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                          </p>
-                          {Number(sale.discount) > 0 && (
-                            <p className="text-xs text-green-600">
-                              -${Number(sale.discount).toLocaleString()} dto.
-                            </p>
-                          )}
-                        </div>
+                        <p className="font-bold text-gray-900">
+                          ${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-500">
                         {new Date(sale.createdAt).toLocaleDateString('es-VE', {
@@ -184,13 +190,22 @@ export default function SalesPage() {
                         })}
                       </td>
                       <td className="py-3 px-4">
-                        <button
-                          onClick={() => { setSelectedSale(sale); setIsDetailOpen(true); }}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                          title="Ver detalle"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setSelectedSale(sale); setIsDetailOpen(true); }}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                            title="Ver detalle"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDownloadInvoice(sale)}
+                            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"
+                            title="Descargar factura"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -310,6 +325,13 @@ export default function SalesPage() {
             {selectedSale.notes && (
               <p className="text-sm text-gray-600 italic">Notas: {selectedSale.notes}</p>
             )}
+
+            <div className="flex justify-end pt-2 border-t">
+              <Button onClick={() => handleDownloadInvoice(selectedSale)}>
+                <Download className="w-4 h-4 mr-2" />
+                Descargar Factura
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
