@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle } from 'lucide-react';
+import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle, Eye, Clock } from 'lucide-react';
 import { activitiesApi } from '../api/activities.api';
 import { clientsApi } from '../api/Clients.api';
 import type { Activity, ActivityType, Client } from '../types';
@@ -30,6 +30,17 @@ export default function CRMPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  // Estados para modal de detalle
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  // Estados para modal de reagendar
+  const [activityToReschedule, setActivityToReschedule] = useState<Activity | null>(null);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduling, setRescheduling] = useState(false);
+  
   const [form, setForm] = useState({
     clientId: '',
     type: 'SEGUIMIENTO' as ActivityType,
@@ -139,18 +150,54 @@ export default function CRMPage() {
   };
 
   const rescheduleTomorrow = async (activity: Activity) => {
+    setActivityToReschedule(activity);
+    // Configurar fecha por defecto para mañana
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0); // 9:00 AM por defecto
+    setRescheduleDate(tomorrow.toISOString().slice(0, 16));
+    setIsRescheduleOpen(true);
+  };
+
+  const handleReschedule = async () => {
+    if (!activityToReschedule || !rescheduleDate) {
+      showToast('error', 'Debe seleccionar una fecha y hora.');
+      return;
+    }
+
     try {
-      const next = new Date();
-      next.setDate(next.getDate() + 1);
-      await activitiesApi.updateActivity(activity.id, {
-        scheduledFor: next.toISOString(),
+      setRescheduling(true);
+      await activitiesApi.updateActivity(activityToReschedule.id, {
+        scheduledFor: new Date(rescheduleDate).toISOString(),
         status: 'PENDIENTE',
       });
       await loadActivities();
-      showToast('success', 'Actividad reagendada para mañana.');
+      setIsRescheduleOpen(false);
+      setActivityToReschedule(null);
+      setRescheduleDate('');
+      showToast('success', 'Actividad reagendada correctamente.');
     } catch {
       showToast('error', 'No se pudo reagendar la actividad.');
+    } finally {
+      setRescheduling(false);
     }
+  };
+
+  const openActivityDetail = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setIsDetailOpen(true);
+  };
+
+  const getActivityTypeInfo = (type: ActivityType) => {
+    const config = {
+      LLAMADA: { icon: '📞', color: 'text-blue-600', label: 'Llamada' },
+      EMAIL: { icon: '📧', color: 'text-green-600', label: 'Email' },
+      REUNION: { icon: '👥', color: 'text-purple-600', label: 'Reunión' },
+      SEGUIMIENTO: { icon: '📅', color: 'text-amber-600', label: 'Seguimiento' },
+      TAREA: { icon: '✅', color: 'text-emerald-600', label: 'Tarea' },
+      NOTA: { icon: '📝', color: 'text-indigo-600', label: 'Nota' },
+    };
+    return config[type] || config.NOTA;
   };
 
   const cancelActivity = async (activity: Activity) => {
@@ -344,18 +391,31 @@ export default function CRMPage() {
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex justify-end gap-2">
-                          {status !== 'COMPLETADA' && (
-                            <Button size="sm" variant="ghost" onClick={() => markComplete(a)}>
-                              <CheckCircle2 className="w-4 h-4 mr-1" /> Completar
-                            </Button>
-                          )}
-                          <Button size="sm" variant="secondary" onClick={() => rescheduleTomorrow(a)}>
-                            Reagendar
+                          <Button size="sm" variant="ghost" onClick={() => openActivityDetail(a)}>
+                            <Eye className="w-4 h-4 mr-1" /> Ver
                           </Button>
-                          {status !== 'CANCELADA' && (
-                            <Button size="sm" variant="danger" onClick={() => cancelActivity(a)}>
-                              <XCircle className="w-4 h-4 mr-1" /> Cancelar
-                            </Button>
+                          
+                          {status === 'PENDIENTE' && (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => markComplete(a)}>
+                                <CheckCircle2 className="w-4 h-4 mr-1" /> Completar
+                              </Button>
+                              <Button size="sm" variant="secondary" onClick={() => rescheduleTomorrow(a)}>
+                                <Clock className="w-4 h-4 mr-1" /> Reagendar
+                              </Button>
+                              <Button size="sm" variant="danger" onClick={() => cancelActivity(a)}>
+                                <XCircle className="w-4 h-4 mr-1" /> Cancelar
+                              </Button>
+                            </>
+                          )}
+                          
+                          {(status === 'COMPLETADA' || status === 'CANCELADA') && (
+                            <Badge 
+                              variant={status === 'COMPLETADA' ? 'success' : 'danger'}
+                              className="text-xs"
+                            >
+                              {status === 'COMPLETADA' ? 'Finalizada' : 'Cancelada'}
+                            </Badge>
                           )}
                         </div>
                       </td>
@@ -430,6 +490,179 @@ export default function CRMPage() {
             <Button isLoading={creating} onClick={createActivity}>Crear Actividad</Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de Reagendar */}
+      <Modal 
+        isOpen={isRescheduleOpen} 
+        onClose={() => setIsRescheduleOpen(false)} 
+        title="Reagendar Actividad" 
+        size="sm"
+      >
+        <div className="space-y-4">
+          {activityToReschedule && (
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="font-medium text-gray-900">{activityToReschedule.title}</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                {activityToReschedule.client?.clientType === 'JURIDICO'
+                  ? activityToReschedule.client?.companyName
+                  : `${activityToReschedule.client?.firstName || ''} ${activityToReschedule.client?.lastName || ''}`.trim()}
+              </p>
+            </div>
+          )}
+          
+          <div>
+            <label className="text-sm font-medium text-gray-700">Nueva fecha y hora *</label>
+            <input
+              type="datetime-local"
+              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              value={rescheduleDate}
+              onChange={(e) => setRescheduleDate(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => setIsRescheduleOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              isLoading={rescheduling} 
+              onClick={handleReschedule}
+            >
+              Reagendar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Detalle */}
+      <Modal 
+        isOpen={isDetailOpen} 
+        onClose={() => setIsDetailOpen(false)} 
+        title="Detalle de Actividad" 
+        size="md"
+      >
+        {selectedActivity && (
+          <div className="space-y-4">
+            {/* Header con tipo de actividad */}
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">
+                {getActivityTypeInfo(selectedActivity.type).icon}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {selectedActivity.title}
+                </h3>
+                <Badge variant="default" className="mt-1">
+                  {getActivityTypeInfo(selectedActivity.type).label}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Estado actual */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Estado:</span>
+              <Badge 
+                variant={
+                  selectedActivity.status === 'COMPLETADA' ? 'success' : 
+                  selectedActivity.status === 'CANCELADA' ? 'danger' : 'warning'
+                }
+              >
+                {selectedActivity.status || 'PENDIENTE'}
+              </Badge>
+            </div>
+
+            {/* Información del cliente */}
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Cliente</h4>
+              <p className="font-medium">
+                {selectedActivity.client?.clientType === 'JURIDICO'
+                  ? selectedActivity.client?.companyName
+                  : `${selectedActivity.client?.firstName || ''} ${selectedActivity.client?.lastName || ''}`.trim()}
+              </p>
+              {selectedActivity.client?.phone && (
+                <p className="text-sm text-gray-600 mt-1">
+                  📞 {selectedActivity.client.phone}
+                </p>
+              )}
+            </div>
+
+            {/* Descripción */}
+            {selectedActivity.description && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Descripción</h4>
+                <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  {selectedActivity.description}
+                </p>
+              </div>
+            )}
+
+            {/* Fechas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Fecha programada:</span>
+                <p className="text-gray-600">
+                  {selectedActivity.scheduledFor 
+                    ? new Date(selectedActivity.scheduledFor).toLocaleString('es-VE')
+                    : 'No programada'}
+                </p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Fecha de creación:</span>
+                <p className="text-gray-600">
+                  {new Date(selectedActivity.createdAt).toLocaleString('es-VE')}
+                </p>
+              </div>
+              {selectedActivity.user && (
+                <div>
+                  <span className="font-medium text-gray-700">Asignado a:</span>
+                  <p className="text-gray-600">
+                    {selectedActivity.user.firstName} {selectedActivity.user.lastName}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Acciones */}
+            {selectedActivity.status === 'PENDIENTE' && (
+              <div className="flex flex-wrap gap-2 pt-4 border-t">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => {
+                    markComplete(selectedActivity);
+                    setIsDetailOpen(false);
+                  }}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1" /> Marcar como Completada
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    rescheduleTomorrow(selectedActivity);
+                  }}
+                >
+                  <Clock className="w-4 h-4 mr-1" /> Reagendar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="danger" 
+                  onClick={() => {
+                    cancelActivity(selectedActivity);
+                    setIsDetailOpen(false);
+                  }}
+                >
+                  <XCircle className="w-4 h-4 mr-1" /> Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
