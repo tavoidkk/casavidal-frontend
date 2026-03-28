@@ -1,0 +1,84 @@
+import { useState } from 'react';
+import { Settings, FolderTree, Upload, Download, Sliders } from 'lucide-react';
+import { Card } from '../components/ui/Card';
+import CategoriesSettings from '../components/settings/CategoriesSettings';
+import GeneralSettings from '../components/settings/GeneralSettings';
+import ImportSettings from '../components/settings/ImportSettings';
+import ExportSettings from '../components/settings/ExportSettings';
+
+type SettingsTab = 'general' | 'categories' | 'import' | 'export';
+
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+
+  const tabs = [
+    {
+      id: 'general' as const,
+      label: 'General',
+      icon: Sliders,
+      description: 'Configuración del sistema'
+    },
+    {
+      id: 'categories' as const,
+      label: 'Categorías',
+      icon: FolderTree,
+      description: 'Gestionar categorías de productos'
+    },
+    {
+      id: 'import' as const,
+      label: 'Importar',
+      icon: Upload,
+      description: 'Importar datos desde archivos'
+    },
+    {
+      id: 'export' as const,
+      label: 'Exportar',
+      icon: Download,
+      description: 'Exportar datos del sistema'
+    }
+  ];
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <Settings className="w-8 h-8 text-primary-600" />
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
+          <p className="text-gray-600 mt-1">Configurar y administrar el sistema</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Card className="mb-6">
+        <div className="flex border-b">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-3 px-6 py-4 border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary-600 text-primary-600 bg-primary-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">{tab.label}</div>
+                <div className="text-xs text-gray-500">{tab.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Content */}
+      <div>
+        {activeTab === 'general' && <GeneralSettings />}
+        {activeTab === 'categories' && <CategoriesSettings />}
+        {activeTab === 'import' && <ImportSettings />}
+        {activeTab === 'export' && <ExportSettings />}
+      </div>
+    </div>
+  );
+}

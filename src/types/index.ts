@@ -295,3 +295,65 @@ export interface ActivityUpdate {
   scheduledFor?: string;
   status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
 }
+
+// Settings
+export type Currency = 'CLP' | 'USD' | 'EUR' | 'ARS' | 'MXN' | 'COP' | 'PEN' | 'BRL';
+
+export interface Settings {
+  id: string;
+  // Información de la empresa
+  companyName: string;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  companyLogo?: string | null;
+  
+  // Configuración financiera
+  currency: Currency;
+  taxRate: number;
+  
+  // Configuración de inventario
+  lowStockThreshold: number;
+  
+  // Configuración de ventas
+  defaultPaymentTerm: number;
+  
+  // Configuración de sistema
+  enableNotifications: boolean;
+  enableAutoBackup: boolean;
+  
+  // Localización
+  locale: string;
+  timezone: string;
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateSettingsInput {
+  // Información de la empresa
+  companyName?: string;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  companyLogo?: string | null;
+  
+  // Configuración financiera
+  currency?: Currency;
+  taxRate?: number;
+  
+  // Configuración de inventario
+  lowStockThreshold?: number;
+  
+  // Configuración de ventas
+  defaultPaymentTerm?: number;
+  
+  // Configuración de sistema
+  enableNotifications?: boolean;
+  enableAutoBackup?: boolean;
+  
+  // Localización
+  locale?: string;
+  timezone?: string;
+}
+

@@ -11,6 +11,7 @@ import SalesPage from './pages/SalesPage';
 import SpecialOrdersPage from './pages/SpecialOrdersPage';
 import SuppliersPage from './pages/SuppliersPage';
 import CRMPage from './pages/CRMPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -50,6 +51,7 @@ function App() {
         <Route path="crm" element={<CRMPage />} />
         <Route path="special-orders" element={<SpecialOrdersPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Ruta 404 */}

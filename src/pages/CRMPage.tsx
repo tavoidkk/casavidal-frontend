@@ -583,11 +583,6 @@ export default function CRMPage() {
                   ? selectedActivity.client?.companyName
                   : `${selectedActivity.client?.firstName || ''} ${selectedActivity.client?.lastName || ''}`.trim()}
               </p>
-              {selectedActivity.client?.phone && (
-                <p className="text-sm text-gray-600 mt-1">
-                  📞 {selectedActivity.client.phone}
-                </p>
-              )}
             </div>
 
             {/* Descripción */}

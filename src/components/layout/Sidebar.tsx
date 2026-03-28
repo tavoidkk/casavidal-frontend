@@ -7,6 +7,7 @@ import {
   Activity,
   ClipboardList,
   Truck,
+  Settings,
   LogOut 
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
@@ -19,10 +20,11 @@ const menuItems = [
   { to: '/crm', icon: Activity, label: 'CRM' },
   { to: '/special-orders', icon: ClipboardList, label: 'Pedidos Especiales' },
   { to: '/suppliers', icon: Truck, label: 'Proveedores' },
+  { to: '/settings', icon: Settings, label: 'Configuración', adminOnly: true },
 ];
 
 export default function Sidebar() {
-  const logout = useAuthStore((state) => state.logout);
+  const { logout, user } = useAuthStore();
 
   return (
     <div className="w-64 bg-white shadow-lg flex flex-col">
@@ -34,22 +36,29 @@ export default function Sidebar() {
 
       {/* Menu Items */}
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-primary-50 text-primary-600'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5 mr-3" />
-            <span className="font-medium">{item.label}</span>
-          </NavLink>
-        ))}
+        {menuItems.map((item) => {
+          // Ocultar items solo para admin si el usuario no es admin
+          if (item.adminOnly && user?.role !== 'ADMIN') {
+            return null;
+          }
+          
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-primary-50 text-primary-600'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5 mr-3" />
+              <span className="font-medium">{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* Logout */}
