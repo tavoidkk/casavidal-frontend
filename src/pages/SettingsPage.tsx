@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Settings, FolderTree, Upload, Download, Sliders } from 'lucide-react';
+import { Settings, FolderTree, Upload, Download, Sliders, FileSpreadsheet } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import CategoriesSettings from '../components/settings/CategoriesSettings';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import ImportSettings from '../components/settings/ImportSettings';
 import ExportSettings from '../components/settings/ExportSettings';
+import ExcelImportExport from '../components/settings/ExcelImportExport';
 
-type SettingsTab = 'general' | 'categories' | 'import' | 'export';
+type SettingsTab = 'general' | 'categories' | 'excel' | 'import' | 'export';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -25,16 +26,22 @@ export default function SettingsPage() {
       description: 'Gestionar categorías de productos'
     },
     {
+      id: 'excel' as const,
+      label: 'Excel',
+      icon: FileSpreadsheet,
+      description: 'Importar/Exportar en Excel'
+    },
+    {
       id: 'import' as const,
-      label: 'Importar',
+      label: 'Importar JSON',
       icon: Upload,
-      description: 'Importar datos desde archivos'
+      description: 'Importar datos desde JSON'
     },
     {
       id: 'export' as const,
-      label: 'Exportar',
+      label: 'Exportar JSON',
       icon: Download,
-      description: 'Exportar datos del sistema'
+      description: 'Exportar datos a JSON'
     }
   ];
 
@@ -76,6 +83,7 @@ export default function SettingsPage() {
       <div>
         {activeTab === 'general' && <GeneralSettings />}
         {activeTab === 'categories' && <CategoriesSettings />}
+        {activeTab === 'excel' && <ExcelImportExport />}
         {activeTab === 'import' && <ImportSettings />}
         {activeTab === 'export' && <ExportSettings />}
       </div>
