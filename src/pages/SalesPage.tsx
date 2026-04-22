@@ -4,11 +4,11 @@ import { salesApi } from '../api/sales.api';
 import type { Sale } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { CreateSaleModal } from '../components/sales/CreateSaleModal';
 import { useAuthStore } from '../store/auth.store';
-import type { CreateSaleInput } from '../api/sales.api';
+import { useSalesStore } from '../store/sales.store';
+import { SaleForm } from '../components/sales/SaleForm';
+import { DraftSalesList } from '../components/sales/DraftSalesList';
 import { generateInvoicePDF } from '../utils/generateInvoice';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -19,21 +19,31 @@ const PAYMENT_LABELS: Record<string, string> = {
   ZELLE: '💸 Zelle',
 };
 
+type PageMode = 'list' | 'form';
+
 export default function SalesPage() {
   const { user } = useAuthStore();
   const canCreate = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
 
+  const {
+    currentSale,
+    draftSales,
+    initNewSale,
+    saveDraftSale,
+    loadDraftSale,
+    deleteDraftSale,
+    clearCurrentSale,
+  } = useSalesStore();
+
+  const [pageMode, setPageMode] = useState<PageMode>('list');
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadSales = useCallback(async () => {
     setLoading(true);
@@ -54,28 +64,63 @@ export default function SalesPage() {
   }, [search, currentPage]);
 
   useEffect(() => {
-    loadSales();
-  }, [loadSales]);
-
-  const handleCreateSale = async (data: CreateSaleInput) => {
-    setIsSubmitting(true);
-    try {
-      const createdSale = await salesApi.create(data);
-      setIsCreateOpen(false);
+    if (pageMode === 'list') {
       loadSales();
-      // Generar factura automáticamente
-      if (createdSale) generateInvoicePDF(createdSale);
+    }
+  }, [loadSales, pageMode]);
+
+  const handleNewSale = () => {
+    initNewSale();
+    setPageMode('form');
+  };
+
+  const handleSaveSale = async () => {
+    if (!currentSale) return;
+
+    try {
+      const saleData = {
+        clientId: currentSale.customer?.id || '',
+        items: currentSale.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+        discount: currentSale.discount,
+        paymentMethod: currentSale.paymentMethod as 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE',
+        notes: currentSale.notes,
+        freight: currentSale.freight,
+      };
+
+      const createdSale = await salesApi.create(saleData);
+      
+      // Generar PDF
+      if (createdSale) {
+        generateInvoicePDF(createdSale);
+      }
+
+      // Limpiar y redirigir
+      clearCurrentSale();
+      deleteDraftSale(currentSale.id);
+      setPageMode('list');
+      loadSales();
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string; message?: string } } };
-      alert(axiosError.response?.data?.error || axiosError.response?.data?.message || 'Error al registrar venta');
-    } finally {
-      setIsSubmitting(false);
+      alert(axiosError.response?.data?.error || axiosError.response?.data?.message || 'Error al guardar venta');
     }
+  };
+
+  const handleHoldSale = () => {
+    saveDraftSale();
+    alert('Venta guardada en espera. Puedes continuar con otra venta.');
+  };
+
+  const handleLoadDraft = (id: string) => {
+    loadDraftSale(id);
+    setPageMode('form');
   };
 
   const handleDownloadInvoice = async (sale: Sale) => {
     try {
-      // Obtener datos completos (con unit de producto) si el ítem no lo trae
       const full = await salesApi.getById(sale.id);
       generateInvoicePDF(full);
     } catch {
@@ -89,6 +134,23 @@ export default function SalesPage() {
     return `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Sin nombre';
   };
 
+  if (pageMode === 'form') {
+    return (
+      <div>
+        <Button variant="secondary" size="sm" onClick={() => {
+          clearCurrentSale();
+          setPageMode('list');
+        }} className="mb-4">
+          ← Volver a Lista
+        </Button>
+        <SaleForm
+          onSaveComplete={handleSaveSale}
+          onHold={handleHoldSale}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
@@ -100,12 +162,22 @@ export default function SalesPage() {
           </p>
         </div>
         {canCreate && (
-          <Button onClick={() => setIsCreateOpen(true)}>
+          <Button onClick={handleNewSale}>
             <Plus className="w-5 h-5 mr-2" />
             Nueva Venta
           </Button>
         )}
       </div>
+
+      {/* Ventas en espera */}
+      {draftSales.length > 0 && (
+        <DraftSalesList
+          drafts={draftSales}
+          onLoadDraft={handleLoadDraft}
+          onDeleteDraft={deleteDraftSale}
+          onNewSale={handleNewSale}
+        />
+      )}
 
       {/* Filtros */}
       <Card className="mb-6">
@@ -115,8 +187,11 @@ export default function SalesPage() {
             type="text"
             placeholder="Buscar por número de venta o cliente..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </Card>
@@ -125,7 +200,7 @@ export default function SalesPage() {
       <Card>
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
             <p className="mt-4 text-gray-600">Cargando ventas...</p>
           </div>
         ) : sales.length === 0 ? (
@@ -133,7 +208,7 @@ export default function SalesPage() {
             <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-600">No se encontraron ventas</p>
             {canCreate && (
-              <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>
+              <Button className="mt-4" onClick={handleNewSale}>
                 Registrar primera venta
               </Button>
             )}
@@ -146,7 +221,7 @@ export default function SalesPage() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">N° Venta</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Items</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Items</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Pago</th>
                     <th className="text-right py-3 px-4 font-semibold text-gray-700">Total</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
@@ -157,7 +232,7 @@ export default function SalesPage() {
                   {sales.map((sale) => (
                     <tr key={sale.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm font-semibold text-primary-600">
+                        <span className="font-mono text-sm font-semibold text-blue-600">
                           {sale.saleNumber}
                         </span>
                       </td>
@@ -167,10 +242,10 @@ export default function SalesPage() {
                           <p className="text-xs text-gray-500">{sale.client.phone}</p>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="default">
+                      <td className="py-3 px-4 text-center">
+                        <span className="text-sm text-gray-600">
                           {sale.items.length} ítem{sale.items.length !== 1 ? 's' : ''}
-                        </Badge>
+                        </span>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
                         {PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}
@@ -189,23 +264,24 @@ export default function SalesPage() {
                           minute: '2-digit',
                         })}
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => { setSelectedSale(sale); setIsDetailOpen(true); }}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                            title="Ver detalle"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDownloadInvoice(sale)}
-                            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"
-                            title="Descargar factura"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        </div>
+                      <td className="py-3 px-4 flex gap-1 justify-end">
+                        <button
+                          onClick={() => {
+                            setSelectedSale(sale);
+                            setIsDetailOpen(true);
+                          }}
+                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          title="Ver detalle"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadInvoice(sale)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Descargar factura"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -242,18 +318,13 @@ export default function SalesPage() {
         )}
       </Card>
 
-      {/* Modal Nueva Venta */}
-      <CreateSaleModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSubmit={handleCreateSale}
-        isLoading={isSubmitting}
-      />
-
       {/* Modal Detalle */}
       <Modal
         isOpen={isDetailOpen}
-        onClose={() => { setIsDetailOpen(false); setSelectedSale(null); }}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedSale(null);
+        }}
         title={`Venta ${selectedSale?.saleNumber}`}
         size="lg"
       >

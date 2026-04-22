@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import ProductsPage from './pages/ProductsPage';
 import SalesPage from './pages/SalesPage';
+import QuotationsPage from './pages/QuotationsPage';
 import SpecialOrdersPage from './pages/SpecialOrdersPage';
 import SuppliersPage from './pages/SuppliersPage';
 import CRMPage from './pages/CRMPage';
@@ -48,6 +49,7 @@ function App() {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="sales" element={<SalesPage />} />
+        <Route path="quotations" element={<QuotationsPage />} />
         <Route path="crm" element={<CRMPage />} />
         <Route path="special-orders" element={<SpecialOrdersPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
