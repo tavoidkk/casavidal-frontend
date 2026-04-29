@@ -214,7 +214,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         <textarea
           {...register('description')}
           rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           placeholder="Descripción opcional del producto..."
         />
       </div>
@@ -290,14 +290,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       </div>
 
       {product && (
-        <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+        <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-xl">
           ⚠️ El SKU y el stock actual no se pueden editar directamente. Usa "Ajustar Stock" para modificar el inventario.
         </p>
       )}
 
       {/* Sección de proveedores (solo en modo edición) */}
       {product && (
-        <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+        <div className="border border-gray-200 rounded-xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Truck className="w-4 h-4" />
             Proveedores vinculados
@@ -309,7 +309,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               {linkedSuppliers.map((ls) => (
                 <div
                   key={ls.supplierId}
-                  className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg text-sm"
+                  className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl text-sm"
                 >
                   <div className="flex items-center gap-2">
                     {ls.isPreferred && (
@@ -354,14 +354,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
           {/* Agregar nuevo proveedor */}
           {availableSuppliers.length > 0 && (
-            <div className="border-t pt-3 space-y-2">
+            <div className="border-t border-gray-100 pt-3 space-y-2">
               <p className="text-xs font-medium text-gray-600">Agregar proveedor</p>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <select
                     value={newSupplierId}
                     onChange={(e) => setNewSupplierId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                   >
                     <option value="">Seleccionar proveedor...</option>
                     {availableSuppliers.map((s) => (
@@ -377,7 +377,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     value={newSupplierPrice}
                     onChange={(e) => setNewSupplierPrice(e.target.value)}
                     placeholder="Precio"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                   />
                 </div>
                 <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap cursor-pointer">
@@ -406,14 +406,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           )}
 
           {availableSuppliers.length === 0 && allSuppliers.length === 0 && (
-            <p className="text-xs text-gray-400 italic border-t pt-2">
+            <p className="text-xs text-gray-400 italic border-t border-gray-100 pt-2">
               No hay proveedores registrados. Crea proveedores en el módulo de Proveedores.
             </p>
           )}
         </div>
       )}
 
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancelar
         </Button>

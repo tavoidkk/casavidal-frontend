@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, ShoppingCart } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { recommendationsApi, RecommendationItem } from '../../api/recommendations.api';
+import { recommendationsApi, type RecommendationItem } from '../../api/recommendations.api';
 
 interface TrendingProductsProps {
   limit?: number;
@@ -53,7 +53,7 @@ export default function TrendingProducts({ limit = 10, days = 30 }: TrendingProd
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-primary-600" />
-          <h2 className="text-xl font-bold text-gray-900">Productos Populares</h2>
+          <h2 className="text-xl font-semibold text-gray-900 font-display">Productos Populares</h2>
         </div>
         <span className="text-sm text-gray-500">Últimos {days} días</span>
       </div>
@@ -62,7 +62,7 @@ export default function TrendingProducts({ limit = 10, days = 30 }: TrendingProd
         {trending.map((item, index) => (
           <div
             key={item.id}
-            className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg hover:border-primary-400 hover:shadow-sm transition-all"
+            className="flex items-center gap-4 p-3 border border-gray-200 rounded-xl hover:border-primary-400 hover:shadow-sm transition-all"
           >
             {/* Ranking badge */}
             <div className="flex-shrink-0 w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
@@ -83,7 +83,7 @@ export default function TrendingProducts({ limit = 10, days = 30 }: TrendingProd
             {/* Price and actions */}
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-lg font-bold text-primary-600">
+                <div className="text-lg font-semibold text-primary-600">
                   ${Number(item.salePrice).toFixed(2)}
                 </div>
                 <div className={`text-xs ${item.currentStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -93,7 +93,7 @@ export default function TrendingProducts({ limit = 10, days = 30 }: TrendingProd
               
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={item.currentStock === 0}
                 onClick={() => window.location.href = `/products/${item.id}`}
               >

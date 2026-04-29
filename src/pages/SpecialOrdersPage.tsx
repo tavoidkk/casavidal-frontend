@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Search, ChevronRight } from 'lucide-react';
 import { specialOrdersApi } from '../api/specialOrders.api';
 import type { SpecialOrder, OrderStatus } from '../types';
@@ -7,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { useAuthStore } from '../store/auth.store';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -129,7 +131,7 @@ export default function SpecialOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pedidos Especiales</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Pedidos Especiales</h1>
           <p className="text-gray-600 mt-1">
             {totalItems} pedido{totalItems !== 1 ? 's' : ''} registrado{totalItems !== 1 ? 's' : ''}
           </p>
@@ -146,14 +148,14 @@ export default function SpecialOrdersPage() {
               placeholder="Buscar por N° pedido, cliente o producto..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
             />
           </div>
           <div className="w-full md:w-48">
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
             >
               <option value="">Todos los estados</option>
               {ALL_STATUSES.map((s) => (
@@ -184,7 +186,7 @@ export default function SpecialOrdersPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
+                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">N° Pedido</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Producto</th>
@@ -195,12 +197,12 @@ export default function SpecialOrdersPage() {
                     <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
-                <tbody>
+                <motion.tbody variants={staggerContainer} initial="hidden" animate="visible">
                   {filteredOrders.map((order) => {
                     const cfg = STATUS_CONFIG[order.status];
                     const next = NEXT_STATUS[order.status];
                     return (
-                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <motion.tr key={order.id} variants={staggerItem} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <span className="font-mono text-sm font-semibold text-primary-600">
                             {order.orderNumber}
@@ -238,7 +240,7 @@ export default function SpecialOrdersPage() {
                           <div className="flex gap-1">
                             <button
                               onClick={() => { setSelectedOrder(order); setIsDetailOpen(true); }}
-                              className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-100 rounded"
+                              className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-xl"
                             >
                               Ver
                             </button>
@@ -246,7 +248,7 @@ export default function SpecialOrdersPage() {
                               <button
                                 onClick={() => handleAdvanceStatus(order)}
                                 disabled={isUpdating}
-                                className="text-xs px-2 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded flex items-center gap-1"
+                                className="text-xs px-2 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-xl flex items-center gap-1"
                               >
                                 <ChevronRight className="w-3 h-3" />
                                 {STATUS_CONFIG[next].label}
@@ -254,15 +256,15 @@ export default function SpecialOrdersPage() {
                             )}
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     );
                   })}
-                </tbody>
+                </motion.tbody>
               </table>
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t">
+              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
                 <p className="text-sm text-gray-600">
                   Página {currentPage} de {totalPages}
                 </p>
@@ -374,13 +376,13 @@ export default function SpecialOrdersPage() {
             </div>
 
             {selectedOrder.notes && (
-              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
                 <span className="font-medium">Notas:</span> {selectedOrder.notes}
               </p>
             )}
 
             {canEdit && selectedOrder.status !== 'ENTREGADO' && selectedOrder.status !== 'CANCELADO' && (
-              <div className="flex justify-between pt-2 border-t">
+              <div className="flex justify-between pt-2 border-t border-gray-100">
                 <Button
                   variant="secondary"
                   onClick={() => handleCancel(selectedOrder)}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle, Eye, Clock } from 'lucide-react';
 import { activitiesApi } from '../api/activities.api';
@@ -8,6 +9,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 const typeOptions: { value: '' | ActivityType; label: string }[] = [
   { value: '', label: 'Todos' },
@@ -190,7 +192,7 @@ export default function CRMPage() {
 
   const getActivityTypeInfo = (type: ActivityType) => {
     const config = {
-      LLAMADA: { icon: '📞', color: 'text-blue-600', label: 'Llamada' },
+      LLAMADA: { icon: '📞', color: 'text-secondary-600', label: 'Llamada' },
       EMAIL: { icon: '📧', color: 'text-green-600', label: 'Email' },
       REUNION: { icon: '👥', color: 'text-purple-600', label: 'Reunión' },
       SEGUIMIENTO: { icon: '📅', color: 'text-amber-600', label: 'Seguimiento' },
@@ -255,7 +257,7 @@ export default function CRMPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">CRM</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">CRM</h1>
           <p className="text-gray-600 mt-1">Agenda comercial y seguimiento de clientes</p>
         </div>
         <div className="flex gap-2">
@@ -307,7 +309,7 @@ export default function CRMPage() {
         </Card>
         <Card>
           <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="w-4 h-4 text-blue-600" />
+            <CalendarClock className="w-4 h-4 text-secondary-600" />
             <h3 className="font-semibold">Próximos 7 días</h3>
           </div>
           <div className="space-y-2 text-sm">
@@ -319,28 +321,36 @@ export default function CRMPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card><p className="text-sm text-gray-500">Hoy / Próx. 7 días</p><p className="text-2xl font-bold">{kpis.todayCount}</p></Card>
-        <Card><p className="text-sm text-gray-500">Pendientes</p><p className="text-2xl font-bold">{kpis.pending}</p></Card>
-        <Card><p className="text-sm text-gray-500">Completadas</p><p className="text-2xl font-bold">{kpis.completed}</p></Card>
-        <Card><p className="text-sm text-gray-500">Vencidas</p><p className="text-2xl font-bold text-red-600">{kpis.overdue}</p></Card>
-      </div>
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <motion.div variants={staggerItem}>
+          <Card interactive><p className="text-sm text-gray-500">Hoy / Próx. 7 días</p><p className="text-2xl font-semibold">{kpis.todayCount}</p></Card>
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <Card interactive><p className="text-sm text-gray-500">Pendientes</p><p className="text-2xl font-semibold">{kpis.pending}</p></Card>
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <Card interactive><p className="text-sm text-gray-500">Completadas</p><p className="text-2xl font-semibold">{kpis.completed}</p></Card>
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <Card interactive><p className="text-sm text-gray-500">Vencidas</p><p className="text-2xl font-semibold text-red-600">{kpis.overdue}</p></Card>
+        </motion.div>
+      </motion.div>
 
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Buscar actividad o cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <select className="px-3 py-2 border border-gray-300 rounded-lg" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as '' | ActivityType)}>
+          <select className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as '' | ActivityType)}>
             {typeOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <select className="px-3 py-2 border border-gray-300 rounded-lg" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as '' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA')}>
+          <select className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as '' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA')}>
             <option value="">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="COMPLETADA">Completada</option>
@@ -361,7 +371,7 @@ export default function CRMPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 text-left">
+                <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
                   <th className="py-3 px-2">Cliente</th>
                   <th className="py-3 px-2">Tipo</th>
                   <th className="py-3 px-2">Asunto</th>
@@ -370,14 +380,14 @@ export default function CRMPage() {
                   <th className="py-3 px-2 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
+              <motion.tbody variants={staggerContainer} initial="hidden" animate="visible">
                 {filtered.map((a) => {
                   const clientName = a.client?.clientType === 'JURIDICO'
                     ? a.client?.companyName || 'Sin cliente'
                     : `${a.client?.firstName || ''} ${a.client?.lastName || ''}`.trim() || 'Sin cliente';
                   const status = a.status || 'PENDIENTE';
                   return (
-                    <tr key={a.id} className="border-b border-gray-100">
+                    <motion.tr key={a.id} variants={staggerItem} className="border-b border-gray-100">
                       <td className="py-3 px-2">{clientName}</td>
                       <td className="py-3 px-2"><Badge variant="default">{a.type}</Badge></td>
                       <td className="py-3 px-2">{a.title}</td>
@@ -419,10 +429,10 @@ export default function CRMPage() {
                           )}
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })}
-              </tbody>
+              </motion.tbody>
             </table>
           </div>
         )}
@@ -433,7 +443,7 @@ export default function CRMPage() {
           <div>
             <label className="text-sm font-medium text-gray-700">Cliente *</label>
             <select
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               value={form.clientId}
               onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}
             >
@@ -450,7 +460,7 @@ export default function CRMPage() {
           <div>
             <label className="text-sm font-medium text-gray-700">Tipo *</label>
             <select
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               value={form.type}
               onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as ActivityType }))}
             >
@@ -462,7 +472,7 @@ export default function CRMPage() {
           <div>
             <label className="text-sm font-medium text-gray-700">Asunto *</label>
             <input
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               value={form.title}
               onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
             />
@@ -470,7 +480,7 @@ export default function CRMPage() {
           <div>
             <label className="text-sm font-medium text-gray-700">Descripción</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               rows={3}
               value={form.description}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -480,7 +490,7 @@ export default function CRMPage() {
             <label className="text-sm font-medium text-gray-700">Fecha programada</label>
             <input
               type="datetime-local"
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               value={form.scheduledFor}
               onChange={(e) => setForm((prev) => ({ ...prev, scheduledFor: e.target.value }))}
             />
@@ -501,7 +511,7 @@ export default function CRMPage() {
       >
         <div className="space-y-4">
           {activityToReschedule && (
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-gray-50 p-3 rounded-xl">
               <h4 className="font-medium text-gray-900">{activityToReschedule.title}</h4>
               <p className="text-sm text-gray-600 mt-1">
                 {activityToReschedule.client?.clientType === 'JURIDICO'
@@ -515,7 +525,7 @@ export default function CRMPage() {
             <label className="text-sm font-medium text-gray-700">Nueva fecha y hora *</label>
             <input
               type="datetime-local"
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               value={rescheduleDate}
               onChange={(e) => setRescheduleDate(e.target.value)}
             />
@@ -576,7 +586,7 @@ export default function CRMPage() {
             </div>
 
             {/* Información del cliente */}
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-gray-50 p-3 rounded-xl">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Cliente</h4>
               <p className="font-medium">
                 {selectedActivity.client?.clientType === 'JURIDICO'
@@ -589,7 +599,7 @@ export default function CRMPage() {
             {selectedActivity.description && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Descripción</h4>
-                <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <p className="text-gray-600 bg-gray-50 p-3 rounded-xl">
                   {selectedActivity.description}
                 </p>
               </div>
@@ -623,7 +633,7 @@ export default function CRMPage() {
 
             {/* Acciones */}
             {selectedActivity.status === 'PENDIENTE' && (
-              <div className="flex flex-wrap gap-2 pt-4 border-t">
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                 <Button 
                   size="sm" 
                   variant="ghost" 

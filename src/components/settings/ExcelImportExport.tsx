@@ -167,8 +167,8 @@ export default function ExcelImportExport() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button
                   onClick={() => handleExport('products')}
-                  loading={loading}
-                  variant="outline"
+                  isLoading={loading}
+                  variant="ghost"
                   className="w-full"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
@@ -176,8 +176,8 @@ export default function ExcelImportExport() {
                 </Button>
                 <Button
                   onClick={() => handleExport('clients')}
-                  loading={loading}
-                  variant="outline"
+                  isLoading={loading}
+                  variant="ghost"
                   className="w-full"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
@@ -185,8 +185,8 @@ export default function ExcelImportExport() {
                 </Button>
                 <Button
                   onClick={() => handleExport('suppliers')}
-                  loading={loading}
-                  variant="outline"
+                  isLoading={loading}
+                  variant="ghost"
                   className="w-full"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
@@ -202,8 +202,8 @@ export default function ExcelImportExport() {
       <Card>
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Upload className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-secondary-100 rounded-xl">
+              <Upload className="w-6 h-6 text-secondary-600" />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -221,7 +221,7 @@ export default function ExcelImportExport() {
                 <select
                   value={importType}
                   onChange={(e) => setImportType(e.target.value as ImportType)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                 >
                   <option value="products">Productos</option>
                   <option value="clients">Clientes</option>
@@ -254,7 +254,7 @@ export default function ExcelImportExport() {
                 />
                 <label
                   htmlFor="excel-import-file"
-                  className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 hover:bg-primary-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-400 hover:bg-primary-50 cursor-pointer transition-colors"
                 >
                   <FileSpreadsheet className="w-6 h-6 text-gray-400" />
                   <span className="text-gray-600">
@@ -265,7 +265,7 @@ export default function ExcelImportExport() {
 
               {/* Selected file */}
               {selectedFile && (
-                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
                   <div className="flex items-center gap-3">
                     <FileSpreadsheet className="w-5 h-5 text-green-600" />
                     <div>
@@ -304,14 +304,14 @@ export default function ExcelImportExport() {
 
               {/* Import results */}
               {importResults && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-blue-900 mb-2">
+                <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-4 mb-4">
+                  <h4 className="font-medium text-secondary-900 mb-2">
                     Resultados de la importación de {getTypeName(importType)}
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                     <div>
-                      <span className="text-blue-700">Total procesados:</span>
-                      <span className="ml-2 font-medium text-blue-900">{importResults.total}</span>
+                      <span className="text-secondary-700">Total procesados:</span>
+                      <span className="ml-2 font-medium text-secondary-900">{importResults.total}</span>
                     </div>
                     <div>
                       <span className="text-green-700">Exitosos:</span>
@@ -337,7 +337,7 @@ export default function ExcelImportExport() {
 
               <Button
                 onClick={handleImport}
-                loading={loading}
+                isLoading={loading}
                 disabled={!selectedFile}
                 className="w-full sm:w-auto"
               >

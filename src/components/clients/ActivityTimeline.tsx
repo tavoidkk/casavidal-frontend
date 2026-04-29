@@ -11,7 +11,7 @@ interface ActivityTimelineProps {
 const getIconAndColor = (type: ActivityType) => {
   switch (type) {
     case 'LLAMADA':
-      return { Icon: Phone, color: 'bg-blue-500' };
+      return { Icon: Phone, color: 'bg-secondary-500' };
     case 'EMAIL':
       return { Icon: Mail, color: 'bg-green-500' };
     case 'REUNION':

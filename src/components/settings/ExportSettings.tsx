@@ -57,11 +57,11 @@ export default function ExportSettings() {
               o para migrar datos a otro sistema.
             </p>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-blue-900 mb-2">
+            <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-4 mb-6">
+              <h4 className="font-medium text-secondary-900 mb-2">
                 ¿Qué se incluye en la exportación?
               </h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+              <ul className="text-sm text-secondary-800 space-y-1">
                 <li>• Configuración del sistema</li>
                 <li>• Usuarios (sin contraseñas)</li>
                 <li>• Clientes y scoring</li>
@@ -90,7 +90,7 @@ export default function ExportSettings() {
 
             <Button
               onClick={handleExport}
-              loading={loading}
+              isLoading={loading}
               className="w-full sm:w-auto"
             >
               <Download className="w-4 h-4" />

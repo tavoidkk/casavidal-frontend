@@ -46,7 +46,7 @@ export function DraftSalesList({ drafts, onLoadDraft, onDeleteDraft, onNewSale }
             <div className="flex gap-2 ml-3">
               <button
                 onClick={() => onLoadDraft(draft.id)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="p-1.5 text-secondary-600 hover:bg-secondary-50 rounded-xl transition-colors"
                 title="Continuar"
               >
                 <Play className="w-4 h-4" />

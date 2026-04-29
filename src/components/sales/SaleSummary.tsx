@@ -32,7 +32,7 @@ export function SaleSummary({
         <select
           value={sale.paymentMethod}
           onChange={(e) => onPaymentMethodChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
         >
           {PAYMENT_METHODS.map((m) => (
             <option key={m.value} value={m.value}>
@@ -51,7 +51,7 @@ export function SaleSummary({
           step="0.01"
           value={sale.freight}
           onChange={(e) => onFreightChange(Math.max(0, parseFloat(e.target.value) || 0))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           placeholder="0.00"
         />
       </Card>
@@ -66,7 +66,7 @@ export function SaleSummary({
               onClick={() => onDiscountChange(sale.discount, type)}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 sale.discountType === type
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-secondary-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -80,7 +80,7 @@ export function SaleSummary({
           step="0.01"
           value={sale.discount}
           onChange={(e) => onDiscountChange(Math.max(0, parseFloat(e.target.value) || 0), sale.discountType)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           placeholder="0.00"
         />
       </Card>
@@ -91,14 +91,14 @@ export function SaleSummary({
         <textarea
           value={sale.notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
           rows={3}
           placeholder="Observaciones o notas adicionales..."
         />
       </Card>
 
       {/* Resumen de totales */}
-      <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300">
+      <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-gray-700">
             <span>Subtotal (Productos)</span>
@@ -123,7 +123,7 @@ export function SaleSummary({
             </div>
           )}
 
-          <div className="border-t border-gray-300 pt-2 flex justify-between text-gray-700">
+          <div className="border-t border-gray-200 pt-2 flex justify-between text-gray-700">
             <span>Subtotal (después descuento)</span>
             <span>
               ${Number(
@@ -141,7 +141,7 @@ export function SaleSummary({
             <span>+${Number(sale.taxAmount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
           </div>
 
-          <div className="border-t border-gray-300 pt-2 flex justify-between font-bold text-base text-gray-900">
+          <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base text-gray-900">
             <span>TOTAL</span>
             <span>${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
           </div>

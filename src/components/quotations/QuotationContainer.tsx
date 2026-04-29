@@ -59,14 +59,14 @@ export const QuotationContainer: React.FC<QuotationContainerProps> = ({ onBack, 
           {onBack && (
             <button
               onClick={onBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
               title="Volver"
             >
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
           )}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-semibold text-gray-900 font-display">
               {currentQuotationId ? 'Editar Cotización' : 'Nueva Cotización'}
             </h1>
             <p className="text-gray-600 mt-1">
@@ -144,7 +144,7 @@ export const QuotationContainer: React.FC<QuotationContainerProps> = ({ onBack, 
         <Card>
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Exportar</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 font-display">Exportar</h3>
               <p className="text-sm text-gray-600">
                 Descarga la cotización en formato PDF listo para enviar al cliente
               </p>

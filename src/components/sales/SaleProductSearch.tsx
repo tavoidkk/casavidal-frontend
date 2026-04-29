@@ -65,7 +65,7 @@ export function SaleProductSearch({ onSelectProduct }: SaleProductSearchProps) {
           placeholder="Buscar por nombre, categoría o código..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
         />
         {search && (
           <button
@@ -78,12 +78,12 @@ export function SaleProductSearch({ onSelectProduct }: SaleProductSearchProps) {
       </div>
 
       {search && filteredProducts.length > 0 && (
-        <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-96 max-h-80 overflow-y-auto">
+        <div className="absolute bg-white border border-gray-200 rounded-xl shadow-lg z-50 w-96 max-h-80 overflow-y-auto">
           {filteredProducts.map((product) => (
             <div key={product.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer last:border-b-0">
               <div className="flex justify-between items-start mb-1">
                 <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{product.category?.name}</span>
+                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-lg">{product.category?.name}</span>
               </div>
               <p className="text-xs text-gray-500 mb-2">Stock: {product.currentStock} unidades</p>
               <div className="flex gap-2 items-center">
@@ -93,7 +93,7 @@ export function SaleProductSearch({ onSelectProduct }: SaleProductSearchProps) {
                   max={product.currentStock}
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 px-2 py-1 border border-gray-300 rounded text-xs"
+                  className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                 />
                 <Button
                   size="sm"

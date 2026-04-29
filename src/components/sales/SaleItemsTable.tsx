@@ -18,10 +18,10 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
             <tr>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Producto</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
@@ -38,7 +38,7 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
                   <p className="font-medium text-gray-900">{item.productName}</p>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{item.category}</span>
+                  <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded-lg">{item.category}</span>
                 </td>
                 <td className="py-3 px-4 text-center">
                   <input
@@ -46,7 +46,7 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
                     min="1"
                     value={item.quantity}
                     onChange={(e) => onUpdateQuantity(item.productId, Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-12 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-12 px-2 py-1 border border-gray-200 rounded-lg text-center text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                   />
                 </td>
                 <td className="py-3 px-4 text-right">
@@ -58,7 +58,7 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
                 <td className="py-3 px-4 text-center">
                   <button
                     onClick={() => onRemoveItem(item.productId)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="w-4 h-4" />

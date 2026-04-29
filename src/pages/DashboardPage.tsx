@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
 import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock } from 'lucide-react';
 import {
@@ -12,6 +13,7 @@ import {
 } from 'recharts';
 import { dashboardApi } from '../api/dashboard.api';
 import type { DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../types';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -51,27 +53,27 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    {
-      icon: TrendingUp,
-      label: 'Ventas Hoy',
-      value: `$${(stats?.salesToday.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-      sub: `${stats?.salesToday.count || 0} transacciones`,
-      color: 'bg-purple-500',
-    },
-    {
-      icon: ShoppingCart,
-      label: 'Ventas del Mes',
-      value: `$${(stats?.salesMonth.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-      sub: `${stats?.salesMonth.count || 0} transacciones`,
-      color: 'bg-green-500',
-    },
-    {
-      icon: Users,
-      label: 'Clientes Activos',
-      value: (stats?.totalClients || 0).toLocaleString(),
-      sub: 'en el sistema',
-      color: 'bg-blue-500',
-    },
+      {
+        icon: TrendingUp,
+        label: 'Ventas Hoy',
+        value: `$${(stats?.salesToday.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
+        sub: `${stats?.salesToday.count || 0} transacciones`,
+        color: 'bg-primary-500',
+      },
+      {
+        icon: ShoppingCart,
+        label: 'Ventas del Mes',
+        value: `$${(stats?.salesMonth.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
+        sub: `${stats?.salesMonth.count || 0} transacciones`,
+        color: 'bg-secondary-500',
+      },
+      {
+        icon: Users,
+        label: 'Clientes Activos',
+        value: (stats?.totalClients || 0).toLocaleString(),
+        sub: 'en el sistema',
+        color: 'bg-secondary-500',
+      },
     {
       icon: AlertCircle,
       label: 'Stock Bajo',
@@ -103,29 +105,41 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Resumen general de tu operacion</p>
+        </div>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+      >
         {statCards.map((stat, index) => (
-          <Card key={index}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+          <motion.div key={index} variants={staggerItem}>
+            <Card interactive>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+                </div>
+                <div className={`${stat.color} p-3 rounded-2xl shrink-0 shadow-sm`}>
+                  <stat.icon className="w-6 h-6 text-white" />
+                </div>
               </div>
-              <div className={`${stat.color} p-3 rounded-full shrink-0`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Gráfica de ventas */}
       <Card className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Ventas últimos 14 días</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Ventas últimos 14 días</h2>
         {trendData.every((d) => d.total === 0) ? (
           <div className="flex items-center justify-center h-40 text-gray-400">
             <p>No hay ventas registradas en este período</p>
@@ -146,7 +160,7 @@ export default function DashboardPage() {
               <Line
                 type="monotone"
                 dataKey="total"
-                stroke="#6366f1"
+                stroke="#BF5824"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
@@ -159,7 +173,7 @@ export default function DashboardPage() {
       {/* Top productos y clientes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">🏆 Top 5 Productos</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Top 5 Productos</h2>
           {topProducts.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">Sin datos de ventas aún</p>
           ) : (
@@ -167,7 +181,7 @@ export default function DashboardPage() {
               {topProducts.map((p, idx) => (
                 <div key={p.productId} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    <span className="w-6 h-6 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-bold">
                       {idx + 1}
                     </span>
                     <div>
@@ -186,7 +200,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">👑 Top 5 Clientes</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Top 5 Clientes</h2>
           {topClients.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">Sin clientes con compras aún</p>
           ) : (
@@ -194,7 +208,7 @@ export default function DashboardPage() {
               {topClients.map((c, idx) => (
                 <div key={c.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    <span className="w-6 h-6 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-xs font-bold">
                       {idx + 1}
                     </span>
                     <div>

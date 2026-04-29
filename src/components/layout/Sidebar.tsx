@@ -29,17 +29,23 @@ export default function Sidebar() {
   const { logout, user } = useAuthStore();
 
   return (
-    <div className="w-64 bg-white shadow-lg flex flex-col">
+    <div className="w-64 bg-primary-500 border-r border-primary-600 flex flex-col">
       {/* Logo */}
-      <div className="p-6 border-b">
-        <h1 className="text-2xl font-bold text-primary-600">CasaVidal</h1>
-        <p className="text-sm text-gray-500">Sistema de Gestión</p>
+      <div className="p-6 border-b border-primary-600">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-white/20 text-white flex items-center justify-center font-display font-semibold backdrop-blur-sm">
+            CV
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-white font-display">CasaVidal</h1>
+            <p className="text-xs text-primary-100">Sistema de Gestión</p>
+          </div>
+        </div>
       </div>
 
       {/* Menu Items */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
-          // Ocultar items solo para admin si el usuario no es admin
           if (item.adminOnly && user?.role !== 'ADMIN') {
             return null;
           }
@@ -49,10 +55,10 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center px-4 py-3 rounded-lg transition-colors ${
+                `flex items-center px-4 py-3 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-primary-50 text-primary-600'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-white/20 text-white shadow-sm backdrop-blur-sm'
+                    : 'text-primary-100 hover:bg-primary-600/50 hover:text-white'
                 }`
               }
             >
@@ -64,10 +70,10 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-primary-600">
         <button
           onClick={logout}
-          className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+          className="flex items-center w-full px-4 py-3 text-primary-100 hover:bg-red-500/30 hover:text-white rounded-xl transition-colors"
         >
           <LogOut className="w-5 h-5 mr-3" />
           <span className="font-medium">Cerrar Sesión</span>

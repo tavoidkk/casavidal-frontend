@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Search, ShoppingCart, Eye, Download } from 'lucide-react';
 import { salesApi } from '../api/sales.api';
 import type { Sale } from '../types';
@@ -10,6 +11,7 @@ import { useSalesStore } from '../store/sales.store';
 import { SaleForm } from '../components/sales/SaleForm';
 import { DraftSalesList } from '../components/sales/DraftSalesList';
 import { generateInvoicePDF } from '../utils/generateInvoice';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 const PAYMENT_LABELS: Record<string, string> = {
   EFECTIVO: '💵 Efectivo',
@@ -156,7 +158,7 @@ export default function SalesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ventas</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Ventas</h1>
           <p className="text-gray-600 mt-1">
             {totalItems} venta{totalItems !== 1 ? 's' : ''} registrada{totalItems !== 1 ? 's' : ''}
           </p>
@@ -191,7 +193,7 @@ export default function SalesPage() {
               setSearch(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
         </div>
       </Card>
@@ -200,7 +202,7 @@ export default function SalesPage() {
       <Card>
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
             <p className="mt-4 text-gray-600">Cargando ventas...</p>
           </div>
         ) : sales.length === 0 ? (
@@ -218,7 +220,7 @@ export default function SalesPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
+                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">N° Venta</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Items</th>
@@ -228,11 +230,11 @@ export default function SalesPage() {
                     <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
-                <tbody>
+                <motion.tbody variants={staggerContainer} initial="hidden" animate="visible">
                   {sales.map((sale) => (
-                    <tr key={sale.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <motion.tr key={sale.id} variants={staggerItem} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm font-semibold text-blue-600">
+                        <span className="font-mono text-sm font-semibold text-primary-600">
                           {sale.saleNumber}
                         </span>
                       </td>
@@ -270,27 +272,27 @@ export default function SalesPage() {
                             setSelectedSale(sale);
                             setIsDetailOpen(true);
                           }}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-xl"
                           title="Ver detalle"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDownloadInvoice(sale)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl"
                           title="Descargar factura"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
-                </tbody>
+                </motion.tbody>
               </table>
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t">
+              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
                 <p className="text-sm text-gray-600">
                   Página {currentPage} de {totalPages}
                 </p>
@@ -353,7 +355,7 @@ export default function SalesPage() {
               </div>
             </div>
 
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -376,7 +378,7 @@ export default function SalesPage() {
               </table>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>${Number(selectedSale.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
@@ -397,7 +399,7 @@ export default function SalesPage() {
               <p className="text-sm text-gray-600 italic">Notas: {selectedSale.notes}</p>
             )}
 
-            <div className="flex justify-end pt-2 border-t">
+            <div className="flex justify-end pt-2 border-t border-gray-100">
               <Button onClick={() => handleDownloadInvoice(selectedSale)}>
                 <Download className="w-4 h-4 mr-2" />
                 Descargar Factura

@@ -197,16 +197,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     updateDocument(docPrefix, docNumber, value);
   };
 
-console.log('🔍 Form State:', {
-  client: client?.firstName,
-  docPrefix,
-  docNumber,
-  docCheck,
-  documentValue: watch('document'),
-  errors: errors.document?.message,
-});
-
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* Tipo de Cliente */}
@@ -247,7 +237,7 @@ console.log('🔍 Form State:', {
               <select
                 value={docPrefix}
                 onChange={handlePrefixChange}
-                className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-20 px-2 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               >
                 <option value="V">V</option>
                 <option value="E">E</option>
@@ -259,7 +249,7 @@ console.log('🔍 Form State:', {
                 onChange={handleNumberChange}
                 placeholder="12345678"
                 maxLength={8}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               />
             </div>
             {errors.document && (
@@ -290,7 +280,7 @@ console.log('🔍 Form State:', {
               <select
                 value={docPrefix}
                 onChange={handlePrefixChange}
-                className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-20 px-2 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               >
                 <option value="J">J</option>
                 <option value="G">G</option>
@@ -302,7 +292,7 @@ console.log('🔍 Form State:', {
                 onChange={handleNumberChange}
                 placeholder="123456789"
                 maxLength={9}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               />
               <span className="flex items-center text-gray-500 font-medium">-</span>
               <input
@@ -311,7 +301,7 @@ console.log('🔍 Form State:', {
                 onChange={handleCheckChange}
                 placeholder="0"
                 maxLength={1}
-                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-16 px-3 py-2 border border-gray-200 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               />
             </div>
             {errors.document && (
@@ -382,14 +372,14 @@ console.log('🔍 Form State:', {
         <textarea
           {...register('notes')}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           placeholder="Información adicional..."
         />
       </div>
 
       <input type="hidden" {...register('document')} />
 
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancelar
         </Button>

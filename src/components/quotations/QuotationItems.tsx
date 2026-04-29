@@ -28,15 +28,15 @@ export const QuotationItems: React.FC = () => {
   }
 
   return (
-    <Card>
+      <Card>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Productos ({items.length})</h3>
+          <h3 className="text-lg font-semibold text-gray-900 font-display">Productos ({items.length})</h3>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border border-gray-100 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Producto</th>
                 <th className="text-center py-3 px-4 font-semibold text-gray-700">Cant.</th>
@@ -62,7 +62,7 @@ export const QuotationItems: React.FC = () => {
                       onChange={(e) =>
                         handleQuantityChange(item.id, Math.max(1, Number(e.target.value)))
                       }
-                      className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-16 px-2 py-1 text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                     />
                   </td>
                   <td className="py-3 px-4 text-right">
@@ -74,7 +74,7 @@ export const QuotationItems: React.FC = () => {
                   <td className="py-3 px-4 text-center">
                     <button
                       onClick={() => handleRemove(item.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />

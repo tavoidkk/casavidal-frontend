@@ -29,8 +29,8 @@ export const QuotationSummary: React.FC = () => {
   return (
     <Card className="sticky top-6 space-y-6">
       {/* Configuración */}
-      <div className="space-y-4 pb-6 border-b">
-        <h3 className="text-lg font-semibold text-gray-900">Configuración</h3>
+      <div className="space-y-4 pb-6 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 font-display">Configuración</h3>
 
         {/* Flete */}
         <div>
@@ -43,7 +43,7 @@ export const QuotationSummary: React.FC = () => {
               step="0.01"
               value={freight}
               onChange={(e) => setFreight(Math.max(0, Number(e.target.value)))}
-              className="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="flex-1 ml-2 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="0.00"
             />
           </div>
@@ -59,7 +59,7 @@ export const QuotationSummary: React.FC = () => {
             step="0.1"
             value={taxRate}
             onChange={(e) => setTaxRate(Math.max(0, Math.min(100, Number(e.target.value))))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
         </div>
 
@@ -69,7 +69,7 @@ export const QuotationSummary: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               onClick={() => setDiscountType('PERCENTAGE')}
-              className={`px-3 py-2 rounded-lg border-2 transition-colors text-sm font-medium ${
+              className={`px-3 py-2 rounded-xl border-2 transition-colors text-sm font-medium ${
                 discountType === 'PERCENTAGE'
                   ? 'border-primary-500 bg-primary-50 text-primary-700'
                   : 'border-gray-300 text-gray-700 hover:border-gray-400'
@@ -79,7 +79,7 @@ export const QuotationSummary: React.FC = () => {
             </button>
             <button
               onClick={() => setDiscountType('FIXED')}
-              className={`px-3 py-2 rounded-lg border-2 transition-colors text-sm font-medium ${
+              className={`px-3 py-2 rounded-xl border-2 transition-colors text-sm font-medium ${
                 discountType === 'FIXED'
                   ? 'border-primary-500 bg-primary-50 text-primary-700'
                   : 'border-gray-300 text-gray-700 hover:border-gray-400'
@@ -96,7 +96,7 @@ export const QuotationSummary: React.FC = () => {
               step={discountType === 'PERCENTAGE' ? '0.1' : '0.01'}
               value={discountValue}
               onChange={(e) => setDiscountValue(Math.max(0, Number(e.target.value)))}
-              className="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="flex-1 ml-2 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="0"
             />
           </div>
@@ -109,7 +109,7 @@ export const QuotationSummary: React.FC = () => {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notas internas o para el cliente..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 resize-none"
             rows={3}
           />
         </div>
@@ -117,9 +117,9 @@ export const QuotationSummary: React.FC = () => {
 
       {/* Resumen Financiero */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Resumen</h3>
+        <h3 className="text-lg font-semibold text-gray-900 font-display">Resumen</h3>
 
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Subtotal</span>
             <span className="font-medium">
@@ -136,7 +136,7 @@ export const QuotationSummary: React.FC = () => {
             </div>
           )}
 
-          <div className="flex justify-between text-sm border-t pt-2">
+          <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
             <span className="text-gray-600">Subtotal + Flete</span>
             <span className="font-medium">
               ${(subtotal + freight).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
@@ -163,9 +163,9 @@ export const QuotationSummary: React.FC = () => {
             </div>
           )}
 
-          <div className="flex justify-between text-base font-bold border-t pt-3 text-gray-900">
+          <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-3 text-gray-900">
             <span>TOTAL</span>
-            <span className="text-primary-600 text-lg">
+            <span className="text-secondary-600 text-lg">
               ${total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
             </span>
           </div>

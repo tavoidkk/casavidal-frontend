@@ -1,5 +1,7 @@
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { modalVariants } from '../../utils/motion';
 
 interface ModalProps {
   isOpen: boolean;
@@ -27,8 +29,6 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const sizes = {
     sm: 'max-w-md',
     md: 'max-w-2xl',
@@ -37,33 +37,45 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
 
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          className={`relative bg-white rounded-lg shadow-xl w-full ${sizes[size]} transform transition-all`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+          {/* Modal */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <motion.div
+              className={`relative bg-white rounded-2xl shadow-lift border border-gray-100 w-full ${sizes[size]}`}
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
             >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-900 font-display">{title}</h3>
+                <button
+                  onClick={onClose}
+                  className="text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-          {/* Content */}
-          <div className="p-6">{children}</div>
+              {/* Content */}
+              <div className="p-6">{children}</div>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 };

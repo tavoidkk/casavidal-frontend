@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { X, Check, CheckCheck, Trash2, ShoppingCart, Package, AlertCircle, Bell } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { Notification } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -26,9 +27,9 @@ export function NotificationDropdown({
   const getIcon = (type: Notification['type']) => {
     switch (type) {
       case 'VENTA':
-        return <ShoppingCart className="w-5 h-5 text-green-500" />;
+        return <ShoppingCart className="w-5 h-5 text-primary-500" />;
       case 'PEDIDO':
-        return <Package className="w-5 h-5 text-blue-500" />;
+        return <Package className="w-5 h-5 text-primary-500" />;
       case 'INVENTARIO':
         return <AlertCircle className="w-5 h-5 text-amber-500" />;
       case 'SISTEMA':
@@ -51,9 +52,14 @@ export function NotificationDropdown({
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+    <motion.div
+      className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-lift border border-gray-100 z-50 overflow-hidden"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+    >
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
         <div>
           <h3 className="font-semibold text-gray-900">Notificaciones</h3>
           <p className="text-xs text-gray-500">
@@ -89,7 +95,6 @@ export function NotificationDropdown({
         </div>
       </div>
 
-      {/* Lista de notificaciones */}
       <div className="max-h-96 overflow-y-auto">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -105,16 +110,13 @@ export function NotificationDropdown({
               } ${notification.link ? 'cursor-pointer' : ''}`}
               onClick={() => handleNotificationClick(notification)}
             >
-              {/* Badge de no leída */}
               {!notification.isRead && (
                 <div className="absolute top-4 left-2 w-2 h-2 bg-primary-500 rounded-full" />
               )}
 
               <div className="flex items-start gap-3 ml-2">
-                {/* Icono */}
                 <div className="flex-shrink-0 mt-1">{getIcon(notification.type)}</div>
 
-                {/* Contenido */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{notification.title}</p>
                   <p className="text-sm text-gray-600 mt-0.5">{notification.message}</p>
@@ -126,7 +128,6 @@ export function NotificationDropdown({
                   </p>
                 </div>
 
-                {/* Acciones */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!notification.isRead && (
                     <button
@@ -157,9 +158,8 @@ export function NotificationDropdown({
         )}
       </div>
 
-      {/* Footer (opcional) */}
       {notifications.length > 0 && (
-        <div className="p-2 text-center border-t border-gray-200">
+        <div className="p-2 text-center border-t border-gray-100 bg-gray-50">
           <button
             onClick={() => {
               navigate('/notifications');
@@ -171,6 +171,6 @@ export function NotificationDropdown({
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

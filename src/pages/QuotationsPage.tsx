@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Eye, Download, Edit2, Trash2, Calendar, User, DollarSign } from 'lucide-react';
 import { useQuotationStore, type SavedQuotation } from '../store/quotations.store';
 import { QuotationContainer } from '../components/quotations/QuotationContainer';
@@ -7,6 +8,7 @@ import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { generateInvoicePDF } from '../utils/generateInvoice';
 import type { Sale } from '../types';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 export default function QuotationsPage() {
   const { savedQuotations, deleteQuotation, reset } = useQuotationStore();
@@ -98,7 +100,7 @@ export default function QuotationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Cotizaciones</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Cotizaciones</h1>
           <p className="text-gray-600 mt-1">
             {savedQuotations.length} cotización{savedQuotations.length !== 1 ? 'es' : ''} guardada{savedQuotations.length !== 1 ? 's' : ''}
           </p>
@@ -113,7 +115,7 @@ export default function QuotationsPage() {
       {savedQuotations.length === 0 ? (
         <Card className="text-center py-16">
           <div className="text-6xl mb-4">📋</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenido al módulo de Cotizaciones</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2 font-display">Bienvenido al módulo de Cotizaciones</h2>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             Crea cotizaciones profesionales de manera rápida y sencilla. Selecciona un cliente, agrega
             productos, configura los descuentos e IVA, y genera un PDF listo para enviar.
@@ -124,10 +126,11 @@ export default function QuotationsPage() {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 gap-4">
           {savedQuotations.map((quotation) => (
-            <Card key={quotation.id} className="hover:shadow-lg transition-shadow">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <motion.div key={quotation.id} variants={staggerItem}>
+              <Card interactive>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 {/* Número */}
                 <div>
                   <p className="text-sm text-gray-600">Número</p>
@@ -167,39 +170,40 @@ export default function QuotationsPage() {
               </div>
 
               {/* Acciones */}
-              <div className="flex items-center justify-end gap-2 pt-4 border-t">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => handleViewDetails(quotation)}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                   title="Ver detalles"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleGeneratePDF(quotation)}
-                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
                   title="Descargar PDF"
                 >
                   <Download className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleEditQuotation(quotation.id)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="p-2 text-secondary-600 hover:bg-secondary-50 rounded-xl transition-colors"
                   title="Editar"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(quotation.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                   title="Eliminar"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            </Card>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Modal de Detalles */}
@@ -240,7 +244,7 @@ export default function QuotationsPage() {
               </div>
             )}
 
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -267,7 +271,7 @@ export default function QuotationsPage() {
               </table>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>${selectedQuotation.subtotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
@@ -296,7 +300,7 @@ export default function QuotationsPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <Button variant="secondary" size="sm" onClick={() => setIsDetailOpen(false)}>
                 Cerrar
               </Button>

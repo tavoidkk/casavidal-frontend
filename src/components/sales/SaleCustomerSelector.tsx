@@ -86,7 +86,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
         <label className="block text-sm font-semibold text-gray-700 mb-3">Cliente</label>
 
         {selectedCustomer ? (
-          <div className="flex items-start justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start justify-between p-3 bg-primary-50 border border-primary-100 rounded-xl">
             <div>
               <p className="font-semibold text-gray-900">{selectedCustomer.name}</p>
               <p className="text-sm text-gray-600">
@@ -111,12 +111,12 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
                 placeholder="Buscar cliente..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
               />
             </div>
 
             {search && filteredClients.length > 0 && (
-              <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-96 max-h-64 overflow-y-auto">
+              <div className="absolute bg-white border border-gray-200 rounded-xl shadow-lg z-50 w-96 max-h-64 overflow-y-auto">
                 {filteredClients.map((client) => (
                   <div
                     key={client.id}
@@ -150,7 +150,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Nombre del cliente"
             />
           </div>
@@ -160,7 +160,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
               type="text"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Teléfono"
             />
           </div>
@@ -170,7 +170,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Email"
             />
           </div>
@@ -180,11 +180,11 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
               type="text"
               value={formData.document}
               onChange={(e) => setFormData({ ...formData, document: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="RIF o Cédula"
             />
           </div>
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-2 pt-4 border-t border-gray-100">
             <Button variant="secondary" onClick={() => setIsModalOpen(false)} className="flex-1">
               Cancelar
             </Button>

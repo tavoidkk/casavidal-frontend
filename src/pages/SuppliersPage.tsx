@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Search, Truck, Pencil, Trash2, X } from 'lucide-react';
 import { suppliersApi, type Supplier, type CreateSupplierInput } from '../api/suppliers.api';
 import { Card } from '../components/ui/Card';
@@ -6,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { useAuthStore } from '../store/auth.store';
+import { staggerContainer, staggerItem } from '../utils/motion';
 
 const EMPTY_FORM: CreateSupplierInput = {
   name: '',
@@ -130,7 +132,7 @@ export default function SuppliersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Proveedores</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Proveedores</h1>
           <p className="text-gray-600 mt-1">{totalItems} proveedor{totalItems !== 1 ? 'es' : ''} registrado{totalItems !== 1 ? 's' : ''}</p>
         </div>
         {canEdit && (
@@ -150,7 +152,7 @@ export default function SuppliersPage() {
             placeholder="Buscar por nombre, RIF o contacto..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
         </div>
       </Card>
@@ -177,7 +179,7 @@ export default function SuppliersPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
+                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Nombre</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">RIF</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Contacto</th>
@@ -186,9 +188,9 @@ export default function SuppliersPage() {
                     <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
-                <tbody>
+                <motion.tbody variants={staggerContainer} initial="hidden" animate="visible">
                   {suppliers.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <motion.tr key={s.id} variants={staggerItem} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 font-medium text-gray-900">{s.name}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 font-mono">{s.rif || '—'}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{s.contactName || '—'}</td>
@@ -199,7 +201,7 @@ export default function SuppliersPage() {
                           {canEdit && (
                             <button
                               onClick={() => openEdit(s)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-xl"
                               title="Editar"
                             >
                               <Pencil className="w-4 h-4" />
@@ -208,7 +210,7 @@ export default function SuppliersPage() {
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(s)}
-                              className="p-2 text-red-400 hover:bg-red-50 rounded-lg"
+                              className="p-2 text-red-400 hover:bg-red-50 rounded-xl"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -216,14 +218,14 @@ export default function SuppliersPage() {
                           )}
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
-                </tbody>
+                </motion.tbody>
               </table>
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t">
+              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
                 <p className="text-sm text-gray-600">Página {currentPage} de {totalPages}</p>
                 <div className="flex space-x-2">
                   <Button variant="secondary" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
@@ -244,7 +246,7 @@ export default function SuppliersPage() {
       >
         <div className="space-y-4">
           {errors.submit && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
               <X className="w-4 h-4 shrink-0" />
               {errors.submit}
             </div>
@@ -300,13 +302,13 @@ export default function SuppliersPage() {
                 value={form.notes || ''}
                 onChange={(e) => setField('notes', e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                 placeholder="Condiciones de pago, tiempo de entrega, etc."
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2 border-t">
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} isLoading={isSubmitting}>
               {editing ? 'Guardar cambios' : 'Crear proveedor'}

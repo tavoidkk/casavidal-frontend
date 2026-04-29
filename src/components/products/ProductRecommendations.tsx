@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Sparkles, TrendingUp, Tag } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { recommendationsApi, RecommendationItem } from '../../api/recommendations.api';
+import { recommendationsApi, type RecommendationItem } from '../../api/recommendations.api';
 
 interface ProductRecommendationsProps {
   productId: string;
@@ -78,14 +78,14 @@ export default function ProductRecommendations({ productId, limit = 6 }: Product
     <Card className="p-6">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-6 h-6 text-primary-600" />
-        <h2 className="text-xl font-bold text-gray-900">También te puede interesar</h2>
+        <h2 className="text-xl font-semibold text-gray-900 font-display">También te puede interesar</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {recommendations.map((item) => (
           <div
             key={item.id}
-            className="border border-gray-200 rounded-lg p-4 hover:border-primary-400 hover:shadow-md transition-all"
+            className="border border-gray-200 rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all"
           >
             {/* Reason badge */}
             <div className="flex items-center gap-1 text-xs text-primary-600 mb-2">
@@ -108,7 +108,7 @@ export default function ProductRecommendations({ productId, limit = 6 }: Product
 
             {/* Price and stock */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-lg font-bold text-primary-600">
+              <span className="text-lg font-semibold text-primary-600">
                 ${Number(item.salePrice).toFixed(2)}
               </span>
               <span className={`text-xs ${item.currentStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -119,7 +119,7 @@ export default function ProductRecommendations({ productId, limit = 6 }: Product
             {/* Actions */}
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="flex-1"
                 onClick={() => window.location.href = `/products/${item.id}`}

@@ -172,28 +172,28 @@ export default function ImportSettings() {
 
             {/* Import results */}
             {importResults && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-blue-900 mb-2">Resultados de la importación</h4>
+              <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-4 mb-6">
+                <h4 className="font-medium text-secondary-900 mb-2">Resultados de la importación</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-blue-700">Configuración:</span>
-                    <span className="ml-2 font-medium text-blue-900">{importResults.settings}</span>
+                    <span className="text-secondary-700">Configuración:</span>
+                    <span className="ml-2 font-medium text-secondary-900">{importResults.settings}</span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Clientes:</span>
-                    <span className="ml-2 font-medium text-blue-900">{importResults.clients}</span>
+                    <span className="text-secondary-700">Clientes:</span>
+                    <span className="ml-2 font-medium text-secondary-900">{importResults.clients}</span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Categorías:</span>
-                    <span className="ml-2 font-medium text-blue-900">{importResults.categories}</span>
+                    <span className="text-secondary-700">Categorías:</span>
+                    <span className="ml-2 font-medium text-secondary-900">{importResults.categories}</span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Productos:</span>
-                    <span className="ml-2 font-medium text-blue-900">{importResults.products}</span>
+                    <span className="text-secondary-700">Productos:</span>
+                    <span className="ml-2 font-medium text-secondary-900">{importResults.products}</span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Proveedores:</span>
-                    <span className="ml-2 font-medium text-blue-900">{importResults.suppliers}</span>
+                    <span className="text-secondary-700">Proveedores:</span>
+                    <span className="ml-2 font-medium text-secondary-900">{importResults.suppliers}</span>
                   </div>
                 </div>
                 {importResults.errors && importResults.errors.length > 0 && (
@@ -211,7 +211,7 @@ export default function ImportSettings() {
 
             <Button
               onClick={handleImport}
-              loading={loading}
+              isLoading={loading}
               disabled={!selectedFile}
               className="w-full sm:w-auto"
             >

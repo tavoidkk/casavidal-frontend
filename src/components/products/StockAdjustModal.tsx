@@ -74,7 +74,7 @@ export const StockAdjustModal: React.FC<StockAdjustModalProps> = ({
       size="md"
     >
       {product && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+        <div className="mb-4 p-3 bg-gray-50 rounded-xl">
           <p className="font-medium text-gray-900">{product.name}</p>
           <p className="text-sm text-gray-500">SKU: {product.sku}</p>
           <p className="text-sm">
@@ -122,12 +122,12 @@ export const StockAdjustModal: React.FC<StockAdjustModalProps> = ({
           <textarea
             {...register('notes')}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
             placeholder="Motivo del ajuste..."
           />
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>

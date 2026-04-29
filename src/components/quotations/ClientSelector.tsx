@@ -130,7 +130,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
     <Card className="border-2 border-dashed border-primary-200 bg-primary-50">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Cliente</h3>
+          <h3 className="text-lg font-semibold text-gray-900 font-display">Cliente</h3>
           {selectedClient && (
             <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
               <Check className="w-4 h-4" />
@@ -140,7 +140,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
         </div>
 
         {selectedClient ? (
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="bg-white p-4 rounded-xl border border-gray-200">
             <div className="space-y-2">
               <p className="text-lg font-semibold text-gray-900">{selectedClient.name}</p>
               {selectedClient.document && (
@@ -155,7 +155,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
             </div>
             <button
               onClick={() => setSelectedClient(null)}
-              className="mt-3 w-full px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              className="mt-3 w-full px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
             >
               Cambiar cliente
             </button>
@@ -169,7 +169,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
                 placeholder="Buscar por nombre, documento o teléfono..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               />
             </div>
 
@@ -189,7 +189,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
                   <button
                     key={client.id}
                     onClick={() => handleSelectClient(client)}
-                    className="w-full text-left p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors group"
+                    className="w-full text-left p-3 hover:bg-gray-50 rounded-xl border border-gray-200 transition-colors group"
                   >
                     <p className="font-medium text-gray-900 group-hover:text-primary-600">
                       {getClientDisplayName(client)}
@@ -234,42 +234,42 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
             placeholder="Nombre *"
             value={newClient.firstName}
             onChange={(e) => setNewClient({ ...newClient, firstName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="text"
             placeholder="Apellido"
             value={newClient.lastName}
             onChange={(e) => setNewClient({ ...newClient, lastName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="text"
             placeholder="Cédula / RIF (Identificación)"
             value={newClient.document}
             onChange={(e) => setNewClient({ ...newClient, document: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="tel"
             placeholder="Teléfono *"
             value={newClient.phone}
             onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="email"
             placeholder="Email"
             value={newClient.email}
             onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="text"
             placeholder="Dirección"
             value={newClient.address}
             onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <div className="flex gap-2 justify-end">
             <Button
