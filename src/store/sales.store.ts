@@ -42,6 +42,10 @@ interface SalesState {
   // Venta activa
   currentSale: DraftSale | null;
   activeSaleId: string | null;
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+  nextStep: () => void;
+  prevStep: () => void;
   initNewSale: () => void;
   setSaleCustomer: (customer: SaleCustomer | null) => void;
   addSaleItem: (item: SaleItem) => void;
@@ -91,6 +95,7 @@ export const useSalesStore = create<SalesState>()(
     (set, get) => ({
       currentSale: null,
       activeSaleId: null,
+      currentStep: 0,
       draftSales: [],
       isDirty: false,
 
@@ -98,8 +103,21 @@ export const useSalesStore = create<SalesState>()(
         set({
           currentSale: createEmptySale(),
           activeSaleId: null,
+          currentStep: 0,
           isDirty: false,
         });
+      },
+
+      setCurrentStep: (step) => {
+        set({ currentStep: Math.max(0, step) });
+      },
+
+      nextStep: () => {
+        set((state) => ({ currentStep: Math.min(2, state.currentStep + 1) }));
+      },
+
+      prevStep: () => {
+        set((state) => ({ currentStep: Math.max(0, state.currentStep - 1) }));
       },
 
       setSaleCustomer: (customer) => {
@@ -280,6 +298,7 @@ export const useSalesStore = create<SalesState>()(
           return {
             currentSale: sale || null,
             activeSaleId: id,
+            currentStep: 0,
             isDirty: false,
           };
         });
@@ -301,6 +320,7 @@ export const useSalesStore = create<SalesState>()(
         set({
           currentSale: null,
           activeSaleId: null,
+          currentStep: 0,
           isDirty: false,
         });
       },

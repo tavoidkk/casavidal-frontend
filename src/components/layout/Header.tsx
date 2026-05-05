@@ -1,6 +1,7 @@
 import { Search, User } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { NotificationBell } from './NotificationBell';
+import { ProfileDropdown } from './ProfileDropdown';
 
 export default function Header() {
   const user = useAuthStore((state) => state.user);
@@ -27,22 +28,20 @@ export default function Header() {
         </div>
 
         {/* User Info & Notifications */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
           {/* Notification Bell */}
           <NotificationBell />
 
-          {/* User Avatar */}
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-gray-500">{user?.role}</p>
-            </div>
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <User className="w-6 h-6 text-primary-600" />
-            </div>
+          {/* User Name */}
+          <div className="hidden sm:block text-right mr-2">
+            <p className="text-sm font-medium text-gray-900">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <p className="text-xs text-gray-500">{user?.role}</p>
           </div>
+
+          {/* Profile Dropdown */}
+          <ProfileDropdown />
         </div>
       </div>
     </header>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 import type { Settings, Currency, UpdateSettingsInput } from '../../types';
 import { Card } from '../ui/Card';
@@ -11,10 +11,12 @@ export default function GeneralSettings() {
   const [submitting, setSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Estado del formulario
   const [form, setForm] = useState<UpdateSettingsInput>({});
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [newLogo, setNewLogo] = useState<File | null>(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Toast/mensaje
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -22,13 +24,11 @@ export default function GeneralSettings() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Cargar configuración actual
   const loadSettings = async () => {
     setLoading(true);
     try {
       const data = await settingsApi.getSettings();
       setSettings(data);
-      // Inicializar formulario con datos actuales
       setForm({
         companyName: data.companyName,
         companyEmail: data.companyEmail || '',
@@ -43,6 +43,9 @@ export default function GeneralSettings() {
         locale: data.locale,
         timezone: data.timezone,
       });
+      if (data.companyLogo) {
+        setLogoPreview(data.companyLogo);
+      }
       setHasChanges(false);
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -56,11 +59,10 @@ export default function GeneralSettings() {
     loadSettings();
   }, []);
 
-  // Detectar cambios
   useEffect(() => {
     if (!settings) return;
-    
-    const changed = 
+
+    const changed =
       form.companyName !== settings.companyName ||
       (form.companyEmail || '') !== (settings.companyEmail || '') ||
       (form.companyPhone || '') !== (settings.companyPhone || '') ||
@@ -72,13 +74,47 @@ export default function GeneralSettings() {
       form.enableNotifications !== settings.enableNotifications ||
       form.enableAutoBackup !== settings.enableAutoBackup ||
       form.locale !== settings.locale ||
-      form.timezone !== settings.timezone;
-    
+      form.timezone !== settings.timezone ||
+      newLogo !== null ||
+      removeLogo;
+
     setHasChanges(changed);
-  }, [form, settings]);
+  }, [form, settings, newLogo, removeLogo]);
 
   const handleInputChange = (field: keyof UpdateSettingsInput, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Selecciona un archivo de imagen válido');
+      return;
+    }
+
+    if (file.size > 2 * 10 * 1024 * 1024) {
+      showToast('error', 'La imagen no puede superar los 2 MB');
+      return;
+    }
+
+    setNewLogo(file);
+    setRemoveLogo(false);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setNewLogo(null);
+    setRemoveLogo(true);
+    setLogoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSave = async () => {
@@ -89,8 +125,19 @@ export default function GeneralSettings() {
 
     setSubmitting(true);
     try {
-      const updated = await settingsApi.updateSettings(form);
+      let logoUrl: string | null | undefined = removeLogo ? null : settings?.companyLogo;
+
+      if (newLogo) {
+        logoUrl = await settingsApi.uploadLogo(newLogo);
+      }
+
+      const updated = await settingsApi.updateSettings({
+        ...form,
+        companyLogo: logoUrl,
+      });
       setSettings(updated);
+      setNewLogo(null);
+      setRemoveLogo(false);
       setHasChanges(false);
       showToast('success', 'Configuración guardada exitosamente');
     } catch (error: any) {
@@ -124,6 +171,9 @@ export default function GeneralSettings() {
         locale: reset.locale,
         timezone: reset.timezone,
       });
+      setLogoPreview(reset.companyLogo || null);
+      setNewLogo(null);
+      setRemoveLogo(false);
       setHasChanges(false);
       showToast('success', 'Configuración restaurada a valores por defecto');
     } catch (error: any) {
@@ -137,7 +187,7 @@ export default function GeneralSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-600 border-t-transparent"></div>
       </div>
     );
   }
@@ -155,11 +205,8 @@ export default function GeneralSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-          toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white`}>
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
           {toast.message}
         </div>
       )}
@@ -172,10 +219,55 @@ export default function GeneralSettings() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Logo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre de la Empresa *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Logo de la Empresa</label>
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                {logoPreview ? (
+                  <div className="relative">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <Image className="w-8 h-8 text-gray-300" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  {logoPreview ? 'Cambiar logo' : 'Subir logo'}
+                </button>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG o WEBP (máx. 2MB)</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa *</label>
             <input
               type="text"
               value={form.companyName || ''}
@@ -187,9 +279,7 @@ export default function GeneralSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email de Contacto
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email de Contacto</label>
             <input
               type="email"
               value={form.companyEmail || ''}
@@ -200,9 +290,7 @@ export default function GeneralSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Teléfono
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
             <input
               type="tel"
               value={form.companyPhone || ''}
@@ -212,10 +300,8 @@ export default function GeneralSettings() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dirección
-            </label>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
             <input
               type="text"
               value={form.companyAddress || ''}
@@ -236,9 +322,7 @@ export default function GeneralSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Moneda
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
             <select
               value={form.currency}
               onChange={(e) => handleInputChange('currency', e.target.value as Currency)}
@@ -253,9 +337,7 @@ export default function GeneralSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tasa de Impuesto (%)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tasa de Impuesto (%)</label>
             <input
               type="number"
               value={form.taxRate}
@@ -270,9 +352,7 @@ export default function GeneralSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Plazo de Pago (días)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Plazo de Pago (días)</label>
             <input
               type="number"
               value={form.defaultPaymentTerm}
@@ -296,9 +376,7 @@ export default function GeneralSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Umbral de Stock Bajo
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Umbral de Stock Bajo</label>
             <input
               type="number"
               value={form.lowStockThreshold}
@@ -308,9 +386,7 @@ export default function GeneralSettings() {
               step="1"
               placeholder="10"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Cantidad mínima antes de mostrar alerta de stock bajo
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Cantidad mínima antes de mostrar alerta de stock bajo</p>
           </div>
         </div>
       </Card>
@@ -332,9 +408,7 @@ export default function GeneralSettings() {
             />
             <div>
               <div className="font-medium text-gray-900">Habilitar Notificaciones</div>
-              <div className="text-sm text-gray-500">
-                Recibir notificaciones sobre ventas, stock bajo, pedidos, etc.
-              </div>
+              <div className="text-sm text-gray-500">Recibir notificaciones sobre ventas, stock bajo, pedidos, etc.</div>
             </div>
           </label>
 
@@ -347,9 +421,7 @@ export default function GeneralSettings() {
             />
             <div>
               <div className="font-medium text-gray-900">Respaldos Automáticos</div>
-              <div className="text-sm text-gray-500">
-                Crear respaldos automáticos de la base de datos periódicamente
-              </div>
+              <div className="text-sm text-gray-500">Crear respaldos automáticos de la base de datos periódicamente</div>
             </div>
           </label>
         </div>
@@ -364,9 +436,7 @@ export default function GeneralSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Idioma/Región
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Idioma/Región</label>
             <select
               value={form.locale}
               onChange={(e) => handleInputChange('locale', e.target.value)}
@@ -383,9 +453,7 @@ export default function GeneralSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Zona Horaria
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zona Horaria</label>
             <select
               value={form.timezone}
               onChange={(e) => handleInputChange('timezone', e.target.value)}
@@ -406,20 +474,12 @@ export default function GeneralSettings() {
 
       {/* Botones de acción */}
       <div className="flex items-center justify-between gap-4">
-        <Button
-          variant="secondary"
-          onClick={handleReset}
-          disabled={submitting}
-        >
+        <Button variant="secondary" onClick={handleReset} disabled={submitting}>
           <RotateCcw className="w-4 h-4 mr-2" />
           Restaurar por Defecto
         </Button>
 
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || submitting}
-          isLoading={submitting}
-        >
+        <Button onClick={handleSave} disabled={!hasChanges || submitting} isLoading={submitting}>
           {submitting ? 'Guardando...' : (
             <>
               <Save className="w-4 h-4 mr-2" />
@@ -430,9 +490,7 @@ export default function GeneralSettings() {
       </div>
 
       {hasChanges && (
-        <div className="text-sm text-amber-600 text-center">
-          ⚠️ Tienes cambios sin guardar
-        </div>
+        <div className="text-sm text-amber-600 text-center">⚠️ Tienes cambios sin guardar</div>
       )}
     </div>
   );

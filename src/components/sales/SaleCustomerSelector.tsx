@@ -20,9 +20,14 @@ interface Client {
 interface SaleCustomerSelectorProps {
   onSelectCustomer: (customer: SaleCustomer | null) => void;
   selectedCustomer: SaleCustomer | null;
+  searchInputRef?: React.RefObject<HTMLInputElement>;
 }
 
-export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: SaleCustomerSelectorProps) {
+export function SaleCustomerSelector({
+  onSelectCustomer,
+  selectedCustomer,
+  searchInputRef,
+}: SaleCustomerSelectorProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,7 +46,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
   }, []);
 
   const filteredClients = useMemo(() => {
-    if (!search.trim()) return [];
+    if (!search.trim()) return clients;
     const query = search.toLowerCase();
     return clients
       .filter((c) =>
@@ -49,8 +54,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
         c.lastName?.toLowerCase().includes(query) ||
         c.document?.toLowerCase().includes(query) ||
         c.phone?.toLowerCase().includes(query)
-      )
-      .slice(0, 8);
+      );
   }, [search, clients]);
 
   const handleSelectClient = (client: Client) => {
@@ -65,18 +69,36 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
     setSearch('');
   };
 
-  const handleCreateQuick = () => {
+  const handleCreateQuick = async () => {
     if (formData.name && formData.phone) {
-      onSelectCustomer({
-        id: `temp-${Date.now()}`,
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        document: formData.document,
-        clientType: formData.clientType as 'NATURAL' | 'JURIDICO',
-      });
-      setIsModalOpen(false);
-      setFormData({ name: '', phone: '', email: '', document: '', clientType: 'NATURAL' });
+      try {
+        const [firstName, ...rest] = formData.name.trim().split(' ');
+        const lastName = rest.join(' ') || undefined;
+        const created = await clientsApi.create({
+          clientType: formData.clientType as 'NATURAL' | 'JURIDICO',
+          firstName,
+          lastName,
+          document: formData.document || undefined,
+          email: formData.email || undefined,
+          phone: formData.phone,
+          address: 'Sin dirección',
+        });
+
+        onSelectCustomer({
+          id: created.id,
+          name: `${created.firstName || ''} ${created.lastName || ''}`.trim() || formData.name,
+          phone: created.phone || formData.phone,
+          email: created.email,
+          document: created.document,
+          clientType: created.clientType || (formData.clientType as 'NATURAL' | 'JURIDICO'),
+        });
+
+        setClients((prev) => [created, ...prev]);
+        setIsModalOpen(false);
+        setFormData({ name: '', phone: '', email: '', document: '', clientType: 'NATURAL' });
+      } catch (error) {
+        console.error('Error creating client:', error);
+      }
     }
   };
 
@@ -86,7 +108,7 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
         <label className="block text-sm font-semibold text-gray-700 mb-3">Cliente</label>
 
         {selectedCustomer ? (
-          <div className="flex items-start justify-between p-3 bg-primary-50 border border-primary-100 rounded-xl">
+          <div className="flex items-start justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
             <div>
               <p className="font-semibold text-gray-900">{selectedCustomer.name}</p>
               <p className="text-sm text-gray-600">
@@ -108,20 +130,21 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Buscar cliente..."
+                placeholder="Buscar por cédula, nombre o teléfono..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                ref={searchInputRef}
                 className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
               />
             </div>
 
-            {search && filteredClients.length > 0 && (
-              <div className="absolute bg-white border border-gray-200 rounded-xl shadow-lg z-50 w-96 max-h-64 overflow-y-auto">
+            {filteredClients.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
                 {filteredClients.map((client) => (
                   <div
                     key={client.id}
                     onClick={() => handleSelectClient(client)}
-                    className="p-3 border-b hover:bg-gray-50 cursor-pointer last:border-b-0"
+                    className="p-2.5 border-b hover:bg-gray-50 cursor-pointer last:border-b-0"
                   >
                     <p className="font-medium text-gray-900 text-sm">
                       {client.firstName} {client.lastName}
@@ -136,13 +159,13 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
             )}
 
             <Button variant="secondary" size="sm" onClick={() => setIsModalOpen(true)} className="w-full">
-              + Crear Cliente Rápido
+              Crear cliente
             </Button>
           </>
         )}
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Crear Cliente Rápido">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Crear cliente">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
@@ -175,13 +198,13 @@ export function SaleCustomerSelector({ onSelectCustomer, selectedCustomer }: Sal
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">RIF/Documento</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Documento</label>
             <input
               type="text"
               value={formData.document}
               onChange={(e) => setFormData({ ...formData, document: e.target.value })}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              placeholder="RIF o Cédula"
+              placeholder="Cédula o RIF"
             />
           </div>
           <div className="flex gap-2 pt-4 border-t border-gray-100">
