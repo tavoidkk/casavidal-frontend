@@ -16,6 +16,8 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [stageFilter, setStageFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +35,8 @@ export default function ClientsPage() {
       const response = await clientsApi.getAll({
         search,
         category: categoryFilter,
+        stage: stageFilter,
+        source: sourceFilter,
         page: currentPage,
         limit: 10,
       });
@@ -47,7 +51,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     loadClients();
-  }, [search, categoryFilter, currentPage]);
+  }, [search, categoryFilter, stageFilter, sourceFilter, currentPage]);
 
   // Crear/Editar cliente
   const handleSubmit = async (data: any) => {
@@ -113,9 +117,9 @@ export default function ClientsPage() {
 
       {/* Filtros */}
       <Card className="mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Búsqueda */}
-          <div className="flex-1">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Búsqueda */}
+            <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -126,24 +130,56 @@ export default function ClientsPage() {
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               />
             </div>
-          </div>
+            </div>
 
-          {/* Filtro por categoría */}
-          <div className="w-full md:w-48">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-            >
-              <option value="">Todas las categorías</option>
-              <option value="VIP">VIP</option>
-              <option value="MAYORISTA">Mayorista</option>
-              <option value="REGULAR">Regular</option>
-              <option value="NUEVO">Nuevo</option>
-            </select>
+            {/* Filtro por categoría */}
+            <div className="w-full md:w-48">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+              >
+                <option value="">Todas las categorías</option>
+                <option value="VIP">VIP</option>
+                <option value="MAYORISTA">Mayorista</option>
+                <option value="REGULAR">Regular</option>
+                <option value="NUEVO">Nuevo</option>
+              </select>
+            </div>
+
+            {/* Filtro por etapa */}
+            <div className="w-full md:w-48">
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+              >
+                <option value="">Todas las etapas</option>
+                <option value="NUEVO">Nuevo</option>
+                <option value="CONTACTADO">Contactado</option>
+                <option value="COTIZACION">Cotización</option>
+                <option value="GANADO">Ganado</option>
+                <option value="PERDIDO">Perdido</option>
+              </select>
+            </div>
+
+            {/* Filtro por origen */}
+            <div className="w-full md:w-48">
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+              >
+                <option value="">Todos los orígenes</option>
+                <option value="REFERIDO">Referido</option>
+                <option value="REDES">Redes</option>
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="VISITA">Visita</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
       {/* Tabla de Clientes */}
       <Card>
@@ -170,6 +206,12 @@ export default function ClientsPage() {
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">
                       Categoría
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                      Etapa
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                      Origen
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">
                       Compras
@@ -216,6 +258,14 @@ export default function ClientsPage() {
                       </td>
                       <td className="py-3 px-4">
                         {getCategoryBadge(client.category)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>
+                          {client.stage}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-700">{client.source || '—'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm">
