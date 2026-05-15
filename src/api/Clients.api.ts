@@ -5,6 +5,8 @@ interface ClientFilters {
   search?: string;
   category?: string;
   clientType?: string;
+  stage?: string;
+  source?: string;
   page?: number;
   limit?: number;
 }
@@ -22,6 +24,9 @@ interface CreateClientData {
   city?: string;
   state?: string;
   category?: string;
+  stage?: string;
+  source?: string;
+  lastContactAt?: string;
   notes?: string;
 }
 
@@ -32,6 +37,8 @@ export const clientsApi = {
     if (filters?.search) params.append('search', filters.search);
     if (filters?.category) params.append('category', filters.category);
     if (filters?.clientType) params.append('clientType', filters.clientType);
+    if (filters?.stage) params.append('stage', filters.stage);
+    if (filters?.source) params.append('source', filters.source);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
 

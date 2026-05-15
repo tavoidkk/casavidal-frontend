@@ -41,6 +41,9 @@ export interface Client {
   city?: string;
   state?: string;
   category: 'NUEVO' | 'REGULAR' | 'VIP' | 'MAYORISTA' | 'INACTIVO';
+  stage: 'NUEVO' | 'CONTACTADO' | 'COTIZACION' | 'GANADO' | 'PERDIDO';
+  source?: 'REFERIDO' | 'REDES' | 'WHATSAPP' | 'VISITA' | 'OTRO';
+  lastContactAt?: string;
   loyaltyPoints: number;
   totalPurchases: number;
   purchaseCount: number;
