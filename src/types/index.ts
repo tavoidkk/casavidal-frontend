@@ -246,10 +246,12 @@ export interface TopClient {
 }
 
 // Notification
+export type NotificationType = 'STOCK_BAJO' | 'VENTA_COMPLETADA' | 'PEDIDO_LISTO' | 'NUEVO_CLIENTE' | 'SISTEMA';
+
 export interface Notification {
   id: string;
   userId: string;
-  type: 'VENTA' | 'PEDIDO' | 'INVENTARIO' | 'SISTEMA';
+  type: NotificationType;
   title: string;
   message: string;
   link?: string;

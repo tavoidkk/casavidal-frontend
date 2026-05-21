@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus, ScanLine } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
+import { BarcodeScanner } from '../common/BarcodeScanner';
 import { productsApi } from '../../api/products.api';
 import type { Category } from '../../api/products.api';
 import type { Product } from '../../types';
@@ -18,6 +19,7 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
   const [search, setSearch] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -115,16 +117,18 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           ref={searchInputRef}
-          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
+          className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
         />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-4 h-4" />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {search && (
+            <button onClick={() => setSearch('')} className="p-1 text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <button type="button" onClick={() => setShowScanner(true)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Escanear código">
+            <ScanLine className="w-4 h-4" />
           </button>
-        )}
+        </div>
       </div>
 
       {filteredProducts.length > 0 && (
@@ -250,6 +254,24 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
           </div>
         </div>
       </Modal>
+
+      {showScanner && (
+        <BarcodeScanner
+          onScan={async (code) => {
+            try {
+              const found = await productsApi.findByCode(code);
+              if (found) {
+                handleSelectProduct(found);
+              } else {
+                setSearch(code);
+              }
+            } catch {
+              setSearch(code);
+            }
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </Card>
   );
 }

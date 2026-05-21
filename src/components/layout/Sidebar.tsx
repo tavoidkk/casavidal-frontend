@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, ShoppingCart, FileText, Activity, ClipboardList, Truck, CalendarDays, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Package, ShoppingCart, FileText, Activity, ClipboardList, Truck, CalendarDays, BarChart3, Bell } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 
 const menuItems = [
@@ -12,6 +12,7 @@ const menuItems = [
   { to: '/crm', icon: Activity, label: 'CRM' },
   { to: '/calendar', icon: CalendarDays, label: 'Calendario' },
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
+  { to: '/notifications', icon: Bell, label: 'Notificaciones' },
   { to: '/special-orders', icon: ClipboardList, label: 'Pedidos Especiales' },
   { to: '/suppliers', icon: Truck, label: 'Proveedores' },
 ];

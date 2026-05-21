@@ -5,12 +5,14 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   interactive?: boolean;
+  onClick?: () => void;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', interactive = false }) => {
+export const Card: React.FC<CardProps> = ({ children, className = '', interactive = false, onClick }) => {
   return (
     <motion.div
       className={`bg-white rounded-2xl shadow-card border border-gray-100 p-6 ${interactive ? 'cursor-pointer' : ''} ${className}`}
+      onClick={onClick}
       whileHover={interactive ? { y: -2, boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)' } : undefined}
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >

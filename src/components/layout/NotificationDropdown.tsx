@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { X, Check, CheckCheck, Trash2, ShoppingCart, Package, AlertCircle, Bell } from 'lucide-react';
+import { X, Check, CheckCheck, Trash2, ShoppingCart, Package, AlertCircle, Bell, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Notification } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -26,12 +26,14 @@ export function NotificationDropdown({
 
   const getIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'VENTA':
+      case 'VENTA_COMPLETADA':
         return <ShoppingCart className="w-5 h-5 text-primary-500" />;
-      case 'PEDIDO':
-        return <Package className="w-5 h-5 text-primary-500" />;
-      case 'INVENTARIO':
-        return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case 'PEDIDO_LISTO':
+        return <Package className="w-5 h-5 text-amber-500" />;
+      case 'STOCK_BAJO':
+        return <AlertCircle className="w-5 h-5 text-red-500" />;
+      case 'NUEVO_CLIENTE':
+        return <Users className="w-5 h-5 text-green-500" />;
       case 'SISTEMA':
         return <Bell className="w-5 h-5 text-gray-500" />;
       default:

@@ -16,6 +16,7 @@ import SuppliersPage from './pages/SuppliersPage';
 import CRMPage from './pages/CRMPage';
 import SettingsPage from './pages/SettingsPage';
 import CalendarPage from './pages/CalendarPage';
+import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
 
 // Layout
@@ -143,6 +144,14 @@ function App() {
             element={
               <motion.div {...pageTransition}>
                 <SettingsPage />
+              </motion.div>
+            }
+          />
+          <Route
+            path="notifications"
+            element={
+              <motion.div {...pageTransition}>
+                <NotificationsPage />
               </motion.div>
             }
           />

@@ -1,5 +1,24 @@
 import { api } from '../lib/axios';
-import type { ApiResponse, DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../types';
+import type { ApiResponse, DashboardStats, SalesTrendItem, TopProduct, TopClient, ActivityType } from '../types';
+
+export interface PendingActivity {
+  id: string;
+  subject: string;
+  type: ActivityType;
+  dueDate?: string;
+  status: string;
+  client?: {
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    clientType: 'NATURAL' | 'JURIDICO';
+  } | null;
+}
+
+export interface PendingActivities {
+  pendingTasks: number;
+  todayAppointments: PendingActivity[];
+}
 
 export const dashboardApi = {
   getStats: async () => {
@@ -19,6 +38,11 @@ export const dashboardApi = {
 
   getTopClients: async (limit = 5) => {
     const { data } = await api.get<ApiResponse<TopClient[]>>(`/dashboard/top-clients?limit=${limit}`);
+    return data.data;
+  },
+
+  getPendingActivities: async () => {
+    const { data } = await api.get<ApiResponse<PendingActivities>>('/dashboard/pending-activities');
     return data.data;
   },
 };

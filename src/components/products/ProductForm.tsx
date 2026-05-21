@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Star, Truck } from 'lucide-react';
+import { Plus, Trash2, Star, Truck, ScanLine } from 'lucide-react';
+import { BarcodeScanner } from '../common/BarcodeScanner';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
@@ -48,6 +49,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +76,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [linkedSuppliers, setLinkedSuppliers] = useState<LinkedSupplier[]>([]);
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [newSupplierId, setNewSupplierId] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   const [newSupplierPrice, setNewSupplierPrice] = useState('');
   const [newIsPreferred, setNewIsPreferred] = useState(false);
   const [supplierLoading, setSupplierLoading] = useState(false);
@@ -275,12 +278,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       {/* Código de barras e imagen */}
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Código de Barras"
-          {...register('barcode')}
-          error={errors.barcode?.message}
-          placeholder="7501234567890"
-        />
+        <div className="relative">
+          <Input
+            label="Código de Barras"
+            {...register('barcode')}
+            error={errors.barcode?.message}
+            placeholder="7501234567890"
+          />
+          <button type="button" onClick={() => setShowScanner(true)} className="absolute right-2 top-7 p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Escanear código">
+            <ScanLine className="w-4 h-4" />
+          </button>
+        </div>
         <Input
           label="URL Imagen"
           {...register('image')}
@@ -421,6 +429,15 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           {product ? 'Actualizar' : 'Crear'} Producto
         </Button>
       </div>
+      {showScanner && (
+        <BarcodeScanner
+          onScan={(code) => {
+            setValue('barcode', code);
+            setShowScanner(false);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </form>
   );
 };

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
-import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock } from 'lucide-react';
+import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock, ListTodo } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -11,30 +12,36 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { dashboardApi } from '../api/dashboard.api';
+import { dashboardApi, type PendingActivities } from '../api/dashboard.api';
 import type { DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../types';
 import { staggerContainer, staggerItem } from '../utils/motion';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trend, setTrend] = useState<SalesTrendItem[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [topClients, setTopClients] = useState<TopClient[]>([]);
+  const [pendingActivities, setPendingActivities] = useState<PendingActivities | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [s, t, tp, tc] = await Promise.all([
+        const [s, t, tp, tc, pa] = await Promise.all([
           dashboardApi.getStats(),
           dashboardApi.getSalesTrend(14),
           dashboardApi.getTopProducts(5),
           dashboardApi.getTopClients(5),
+          dashboardApi.getPendingActivities(),
         ]);
         setStats(s);
         setTrend(t);
         setTopProducts(tp);
         setTopClients(tc);
+        setPendingActivities(pa);
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -59,6 +66,7 @@ export default function DashboardPage() {
         value: `$${(stats?.salesToday.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
         sub: `${stats?.salesToday.count || 0} transacciones`,
         color: 'bg-primary-500',
+        onClick: () => navigate('/sales'),
       },
       {
         icon: ShoppingCart,
@@ -66,6 +74,7 @@ export default function DashboardPage() {
         value: `$${(stats?.salesMonth.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
         sub: `${stats?.salesMonth.count || 0} transacciones`,
         color: 'bg-secondary-500',
+        onClick: () => navigate('/sales'),
       },
       {
         icon: Users,
@@ -73,6 +82,7 @@ export default function DashboardPage() {
         value: (stats?.totalClients || 0).toLocaleString(),
         sub: 'en el sistema',
         color: 'bg-secondary-500',
+        onClick: () => navigate('/clients'),
       },
     {
       icon: AlertCircle,
@@ -80,6 +90,7 @@ export default function DashboardPage() {
       value: String(stats?.lowStockCount || 0),
       sub: 'productos bajo mínimo',
       color: 'bg-red-500',
+      onClick: () => navigate('/products?lowStock=true'),
     },
     {
       icon: Package,
@@ -87,6 +98,7 @@ export default function DashboardPage() {
       value: String(stats?.pendingOrders || 0),
       sub: 'pedidos especiales activos',
       color: 'bg-amber-500',
+      onClick: () => navigate('/special-orders'),
     },
     {
       icon: Clock,
@@ -121,7 +133,7 @@ export default function DashboardPage() {
       >
         {statCards.map((stat, index) => (
           <motion.div key={index} variants={staggerItem}>
-            <Card interactive>
+            <Card interactive onClick={stat.onClick}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
@@ -228,6 +240,48 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {/* Actividades Pendientes */}
+      {pendingActivities && (
+        <Card className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 font-display flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-primary-500" /> Actividades Pendientes
+            </h2>
+            <span className="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full font-medium">
+              {pendingActivities.pendingTasks} tareas
+            </span>
+          </div>
+          {pendingActivities.todayAppointments.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">No hay actividades programadas para hoy</p>
+          ) : (
+            <div className="space-y-3">
+              {pendingActivities.todayAppointments.map((act) => (
+                <div key={act.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : 'bg-green-400'}`} />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{act.subject}</p>
+                      <p className="text-xs text-gray-500">
+                        {act.client
+                          ? act.client.clientType === 'JURIDICO'
+                            ? act.client.companyName
+                            : `${act.client.firstName || ''} ${act.client.lastName || ''}`
+                          : 'Sin cliente'}
+                      </p>
+                    </div>
+                  </div>
+                  {act.dueDate && (
+                    <span className="text-xs text-gray-400">
+                      {format(new Date(act.dueDate), 'HH:mm', { locale: es })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
