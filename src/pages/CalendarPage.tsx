@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { PlusCircle, RefreshCcw, Settings, CloudDownload } from 'lucide-react';
+import { PlusCircle, RefreshCcw, Settings, CloudDownload, Clock, User, MapPin, FileText, CheckCircle2, Trash2 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -85,6 +85,41 @@ export default function CalendarPage() {
     timeMax: '',
   });
   const [googleBusy, setGoogleBusy] = useState(false);
+
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const handleSelectEvent = (event: any) => {
+    setSelectedEvent(event.resource);
+    setIsDetailOpen(true);
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!selectedEvent) return;
+    setDetailLoading(true);
+    try {
+      await calendarEventsApi.update(selectedEvent.id, { status: 'COMPLETADA' });
+      setIsDetailOpen(false);
+      setSelectedEvent(null);
+      await fetchEvents();
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    setDetailLoading(true);
+    try {
+      await calendarEventsApi.remove(selectedEvent.id);
+      setIsDetailOpen(false);
+      setSelectedEvent(null);
+      await fetchEvents();
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const fetchBaseData = async () => {
     const [types, clientsResponse, settings] = await Promise.all([
@@ -329,6 +364,7 @@ export default function CalendarPage() {
           selectable
           resizable
           onSelectSlot={(slot) => handleSelectSlot({ start: slot.start as Date, end: slot.end as Date })}
+          onSelectEvent={handleSelectEvent}
           onEventResize={handleEventResize}
           step={bookingStep}
           timeslots={2}
@@ -532,6 +568,93 @@ export default function CalendarPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelectedEvent(null); }} title={selectedEvent?.title || 'Detalle del evento'} size="md">
+        {selectedEvent && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                selectedEvent.category === 'TAREA' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+              }`}>
+                {selectedEvent.category === 'TAREA' ? 'Tarea' : 'Agenda'}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                selectedEvent.status === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' :
+                selectedEvent.status === 'COMPLETADA' ? 'bg-green-100 text-green-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {selectedEvent.status === 'PENDIENTE' ? 'Pendiente' :
+                 selectedEvent.status === 'COMPLETADA' ? 'Completada' : 'Cancelada'}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                selectedEvent.source === 'LOCAL' ? 'bg-gray-100 text-gray-800' : 'bg-indigo-100 text-indigo-800'
+              }`}>
+                {selectedEvent.source}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="w-4 h-4" />
+                <span>
+                  {format(new Date(selectedEvent.startDate), 'dd MMM yyyy HH:mm')} — {format(new Date(selectedEvent.endDate), 'HH:mm')}
+                </span>
+              </div>
+
+              {selectedEvent.client && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>
+                    {selectedEvent.client.clientType === 'JURIDICO'
+                      ? selectedEvent.client.companyName
+                      : `${selectedEvent.client.firstName || ''} ${selectedEvent.client.lastName || ''}`.trim()}
+                  </span>
+                </div>
+              )}
+
+              {selectedEvent.assignedTo && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>{selectedEvent.assignedTo.firstName} {selectedEvent.assignedTo.lastName}</span>
+                </div>
+              )}
+
+              {selectedEvent.location && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4" />
+                  <span>{selectedEvent.location}</span>
+                </div>
+              )}
+            </div>
+
+            {selectedEvent.description && (
+              <div className="border-t border-gray-100 pt-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                  <FileText className="w-4 h-4" />
+                  Descripción
+                </div>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedEvent.description}</p>
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2 pt-3 border-t border-gray-100">
+              <div className="flex gap-2">
+                {selectedEvent.status === 'PENDIENTE' && (
+                  <Button isLoading={detailLoading} onClick={handleCompleteEvent}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Marcar completada
+                  </Button>
+                )}
+                <Button variant="danger" isLoading={detailLoading} onClick={handleDeleteEvent}>
+                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                </Button>
+              </div>
+              <Button variant="secondary" onClick={() => { setIsDetailOpen(false); setSelectedEvent(null); }}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
