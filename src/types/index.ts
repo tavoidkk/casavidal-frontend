@@ -4,7 +4,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'VENDEDOR' | 'VISUALIZADOR';
+  role: 'ADMIN' | 'VENDEDOR' | 'VISUALIZADOR' | 'WORKER';
   avatar?: string;
 }
 
@@ -331,6 +331,90 @@ export interface Settings {
   
   createdAt: string;
   updatedAt: string;
+}
+
+// Workers
+export interface Worker {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'WORKER';
+  isActive: boolean;
+}
+
+// Calendar
+export type CalendarEventCategory = 'TAREA' | 'AGENDA';
+export type CalendarEventStatus = 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+export type CalendarEventSource = 'LOCAL' | 'GOOGLE';
+
+export interface EventType {
+  id: string;
+  name: string;
+  color: string;
+  defaultDurationMinutes: number;
+  isActive: boolean;
+}
+
+export interface BookingSettings {
+  id: string;
+  workDays: string[];
+  startTime: string;
+  endTime: string;
+  intervalMinutes: number;
+  timezone: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  category: CalendarEventCategory;
+  status: CalendarEventStatus;
+  source: CalendarEventSource;
+  startDate: string;
+  endDate: string;
+  allDay: boolean;
+  clientId?: string;
+  assignedToId: string;
+  eventTypeId?: string;
+  location?: string;
+  googleEventId?: string;
+  client?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    clientType: 'NATURAL' | 'JURIDICO';
+  };
+  assignedTo?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+  eventType?: EventType | null;
+}
+
+export interface CalendarEventCreate {
+  title: string;
+  category: CalendarEventCategory;
+  status?: CalendarEventStatus;
+  startDate: string;
+  allDay?: boolean;
+  clientId?: string;
+  eventTypeId?: string;
+}
+
+export interface CalendarEventUpdate {
+  title?: string;
+  category?: CalendarEventCategory;
+  status?: CalendarEventStatus;
+  startDate?: string;
+  endDate?: string;
+  allDay?: boolean;
+  clientId?: string | null;
+  eventTypeId?: string | null;
 }
 
 export interface UpdateSettingsInput {

@@ -54,6 +54,52 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.calendar-shell {
+  --fc-border-color: #e5e7eb;
+  --fc-daygrid-event-dot-width: 6px;
+  --fc-today-bg-color: rgba(245, 122, 39, 0.08);
+}
+
+.calendar-shell .fc-toolbar-title {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  color: #111827;
+}
+
+.calendar-shell .fc-button {
+  background: #32663C;
+  border-color: #32663C;
+  box-shadow: none;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+}
+
+.calendar-shell .fc-button:hover,
+.calendar-shell .fc-button:focus {
+  background: #2c5935;
+  border-color: #2c5935;
+}
+
+.calendar-shell .fc-button-primary:not(:disabled).fc-button-active,
+.calendar-shell .fc-button-primary:not(:disabled):active {
+  background: #1e3d25;
+  border-color: #1e3d25;
+}
+
+.calendar-shell .fc-daygrid-day-number,
+.calendar-shell .fc-col-header-cell-cushion {
+  color: #374151;
+  font-weight: 600;
+}
+
+.calendar-shell .fc-event {
+  border-radius: 0.6rem;
+  border: none;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.75rem;
+}
+
 ::selection {
   background: rgba(50, 102, 60, 0.2);
   color: #111827;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, ShoppingCart, FileText, Activity, ClipboardList, Truck } from 'lucide-react';
+import { LayoutDashboard, Users, Package, ShoppingCart, FileText, Activity, ClipboardList, Truck, CalendarDays, BarChart3 } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 
 const menuItems = [
@@ -10,6 +10,8 @@ const menuItems = [
   { to: '/sales', icon: ShoppingCart, label: 'Ventas' },
   { to: '/quotations', icon: FileText, label: 'Cotizaciones' },
   { to: '/crm', icon: Activity, label: 'CRM' },
+  { to: '/calendar', icon: CalendarDays, label: 'Calendario' },
+  { to: '/reports', icon: BarChart3, label: 'Reportes' },
   { to: '/special-orders', icon: ClipboardList, label: 'Pedidos Especiales' },
   { to: '/suppliers', icon: Truck, label: 'Proveedores' },
 ];

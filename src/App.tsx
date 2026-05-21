@@ -15,6 +15,8 @@ import SpecialOrdersPage from './pages/SpecialOrdersPage';
 import SuppliersPage from './pages/SuppliersPage';
 import CRMPage from './pages/CRMPage';
 import SettingsPage from './pages/SettingsPage';
+import CalendarPage from './pages/CalendarPage';
+import ReportsPage from './pages/ReportsPage';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -101,6 +103,22 @@ function App() {
             element={
               <motion.div {...pageTransition}>
                 <CRMPage />
+              </motion.div>
+            }
+          />
+          <Route
+            path="calendar"
+            element={
+              <motion.div {...pageTransition}>
+                <CalendarPage />
+              </motion.div>
+            }
+          />
+          <Route
+            path="reports"
+            element={
+              <motion.div {...pageTransition}>
+                <ReportsPage />
               </motion.div>
             }
           />
