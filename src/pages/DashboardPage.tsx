@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
-import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock, ListTodo } from 'lucide-react';
+import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock, ListTodo, Sparkles } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { dashboardApi, type PendingActivities } from '../api/dashboard.api';
+import { suggestionsApi } from '../api/suggestions.api';
 import type { DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../types';
 import { staggerContainer, staggerItem } from '../utils/motion';
 import { format } from 'date-fns';
@@ -25,23 +26,26 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [pendingActivities, setPendingActivities] = useState<PendingActivities | null>(null);
+  const [suggestionCount, setSuggestionCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [s, t, tp, tc, pa] = await Promise.all([
+        const [s, t, tp, tc, pa, sc] = await Promise.all([
           dashboardApi.getStats(),
           dashboardApi.getSalesTrend(14),
           dashboardApi.getTopProducts(5),
           dashboardApi.getTopClients(5),
           dashboardApi.getPendingActivities(),
+          suggestionsApi.getSuggestionCount().catch(() => 0),
         ]);
         setStats(s);
         setTrend(t);
         setTopProducts(tp);
         setTopClients(tc);
         setPendingActivities(pa);
+        setSuggestionCount(sc);
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -101,11 +105,12 @@ export default function DashboardPage() {
       onClick: () => navigate('/special-orders'),
     },
     {
-      icon: Clock,
-      label: 'Listo para entregar',
-      value: '—',
-      sub: 'próximamente',
-      color: 'bg-gray-400',
+      icon: Sparkles,
+      label: 'Sugerencias CRM',
+      value: String(suggestionCount),
+      sub: 'acciones recomendadas',
+      color: 'bg-purple-500',
+      onClick: () => navigate('/crm'),
     },
   ];
 

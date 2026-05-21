@@ -259,6 +259,20 @@ export interface Notification {
   createdAt: string;
 }
 
+// Suggestion
+export interface Suggestion {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientCategory: string;
+  type: ActivityType;
+  title: string;
+  description: string;
+  reason: string;
+  priority: number;
+  ruleKey: string;
+}
+
 // Activity
 export type ActivityType = 'LLAMADA' | 'EMAIL' | 'REUNION' | 'NOTA' | 'TAREA' | 'SEGUIMIENTO';
 

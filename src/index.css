@@ -100,6 +100,23 @@ body {
   font-size: 0.75rem;
 }
 
+.calendar-shell .rbc-day-slot .rbc-time-slot {
+  transition: background-color 0.15s ease;
+}
+.calendar-shell .rbc-day-slot .rbc-time-slot:hover {
+  background-color: rgba(50, 102, 60, 0.08);
+  cursor: pointer;
+}
+
+.calendar-shell .rbc-event {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.calendar-shell .rbc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
 ::selection {
   background: rgba(50, 102, 60, 0.2);
   color: #111827;
