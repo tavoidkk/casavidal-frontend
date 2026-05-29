@@ -9,7 +9,7 @@ type BackendActivity = {
   subject: string;
   description?: string;
   dueDate?: string;
-  status: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  status: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA' | 'PERDIDA';
   createdAt: string;
   assignedTo?: { firstName: string; lastName: string; role: string };
   client?: { firstName?: string; lastName?: string; companyName?: string; clientType: 'NATURAL' | 'JURIDICO' };

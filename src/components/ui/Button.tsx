@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost';
 
 interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: ButtonVariant;
@@ -25,6 +25,7 @@ export const Button: React.FC<ButtonProps> = ({
   const variants: Record<ButtonVariant, string> = {
     primary: 'bg-secondary-500 text-white hover:bg-secondary-600 focus:ring-secondary-300 shadow-sm',
     secondary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-300 shadow-sm',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-300 shadow-sm',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-300',
     ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-200',
   };

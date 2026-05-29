@@ -259,7 +259,7 @@ export default function DashboardPage() {
               {pendingActivities.todayAppointments.map((act) => (
                 <div key={act.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : 'bg-green-400'}`} />
+                    <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : act.status === 'PERDIDA' ? 'bg-red-400' : 'bg-green-400'}`} />
                     <div>
                       <p className="text-sm font-medium text-gray-900">{act.subject}</p>
                       <p className="text-xs text-gray-500">

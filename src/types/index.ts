@@ -270,7 +270,7 @@ export interface Activity {
   title: string;
   description?: string;
   scheduledFor?: string;
-  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA' | 'PERDIDA';
   createdAt: string;
   user: {
     firstName: string;
@@ -298,7 +298,7 @@ export interface ActivityUpdate {
   description?: string;
   type?: ActivityType;
   scheduledFor?: string;
-  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  status?: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA' | 'PERDIDA';
 }
 
 // Settings

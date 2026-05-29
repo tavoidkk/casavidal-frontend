@@ -28,7 +28,7 @@ export default function CRMPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'' | ActivityType>('');
-  const [statusFilter, setStatusFilter] = useState<'' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA'>('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA' | 'PERDIDA'>('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -89,6 +89,7 @@ export default function CRMPage() {
   today.setHours(0, 0, 0, 0);
   const weekAhead = new Date(today);
   weekAhead.setDate(weekAhead.getDate() + 7);
+  const todayEnd = new Date(today.getTime() + 86400000);
 
   const kpis = useMemo(() => {
     const all = activities;
@@ -350,11 +351,12 @@ export default function CRMPage() {
           <select className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as '' | ActivityType)}>
             {typeOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <select className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as '' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA')}>
+          <select className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as '' | 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA' | 'PERDIDA')}>
             <option value="">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="COMPLETADA">Completada</option>
             <option value="CANCELADA">Cancelada</option>
+            <option value="PERDIDA">Perdida</option>
           </select>
           <div className="flex items-center text-gray-500 text-sm">
             <Filter className="w-4 h-4 mr-2" /> {filtered.length} actividades
@@ -386,6 +388,8 @@ export default function CRMPage() {
                     ? a.client?.companyName || 'Sin cliente'
                     : `${a.client?.firstName || ''} ${a.client?.lastName || ''}`.trim() || 'Sin cliente';
                   const status = a.status || 'PENDIENTE';
+                  const activityDate = new Date(a.scheduledFor || a.createdAt);
+                  const isFuturePending = status === 'PENDIENTE' && activityDate >= todayEnd;
                   return (
                     <motion.tr key={a.id} variants={staggerItem} className="border-b border-gray-100">
                       <td className="py-3 px-2">{clientName}</td>
@@ -395,7 +399,7 @@ export default function CRMPage() {
                         {new Date(a.scheduledFor || a.createdAt).toLocaleString('es-VE')}
                       </td>
                       <td className="py-3 px-2">
-                        <Badge variant={status === 'COMPLETADA' ? 'success' : status === 'CANCELADA' ? 'danger' : 'warning'}>
+                        <Badge variant={status === 'COMPLETADA' ? 'success' : status === 'CANCELADA' || status === 'PERDIDA' ? 'danger' : 'warning'}>
                           {status}
                         </Badge>
                       </td>
@@ -405,11 +409,14 @@ export default function CRMPage() {
                             <Eye className="w-4 h-4 mr-1" /> Ver
                           </Button>
                           
-                          {status === 'PENDIENTE' && (
+                          {status === 'PENDIENTE' && isFuturePending && (
+                            <Button size="sm" variant="success" onClick={() => markComplete(a)}>
+                              <CheckCircle2 className="w-4 h-4 mr-1" /> Completar
+                            </Button>
+                          )}
+
+                          {(status === 'PENDIENTE' || status === 'PERDIDA') && !isFuturePending && (
                             <>
-                              <Button size="sm" variant="ghost" onClick={() => markComplete(a)}>
-                                <CheckCircle2 className="w-4 h-4 mr-1" /> Completar
-                              </Button>
                               <Button size="sm" variant="secondary" onClick={() => rescheduleTomorrow(a)}>
                                 <Clock className="w-4 h-4 mr-1" /> Reagendar
                               </Button>
@@ -419,12 +426,12 @@ export default function CRMPage() {
                             </>
                           )}
                           
-                          {(status === 'COMPLETADA' || status === 'CANCELADA') && (
+                          {(status === 'COMPLETADA' || status === 'CANCELADA' || status === 'PERDIDA') && (
                             <Badge 
                               variant={status === 'COMPLETADA' ? 'success' : 'danger'}
                               className="text-xs"
                             >
-                              {status === 'COMPLETADA' ? 'Finalizada' : 'Cancelada'}
+                              {status === 'COMPLETADA' ? 'Finalizada' : status === 'CANCELADA' ? 'Cancelada' : 'Perdida'}
                             </Badge>
                           )}
                         </div>
@@ -578,7 +585,7 @@ export default function CRMPage() {
               <Badge 
                 variant={
                   selectedActivity.status === 'COMPLETADA' ? 'success' : 
-                  selectedActivity.status === 'CANCELADA' ? 'danger' : 'warning'
+                  selectedActivity.status === 'CANCELADA' || selectedActivity.status === 'PERDIDA' ? 'danger' : 'warning'
                 }
               >
                 {selectedActivity.status || 'PENDIENTE'}
@@ -632,28 +639,20 @@ export default function CRMPage() {
             </div>
 
             {/* Acciones */}
-            {selectedActivity.status === 'PENDIENTE' && (
+            {(selectedActivity.status === 'PENDIENTE' || selectedActivity.status === 'PERDIDA') && (
               <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => {
-                    markComplete(selectedActivity);
-                    setIsDetailOpen(false);
-                  }}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1" /> Marcar como Completada
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
-                  onClick={() => {
-                    setIsDetailOpen(false);
-                    rescheduleTomorrow(selectedActivity);
-                  }}
-                >
-                  <Clock className="w-4 h-4 mr-1" /> Reagendar
-                </Button>
+                {selectedActivity.status === 'PENDIENTE' && new Date(selectedActivity.scheduledFor || selectedActivity.createdAt) >= todayEnd && (
+                  <Button 
+                    size="sm" 
+                    variant="success" 
+                    onClick={() => {
+                      markComplete(selectedActivity);
+                      setIsDetailOpen(false);
+                    }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" /> Marcar como Completada
+                  </Button>
+                )}
                 <Button 
                   size="sm" 
                   variant="danger" 
