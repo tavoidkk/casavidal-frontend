@@ -499,14 +499,6 @@ export default function CRMPage() {
                             </>
                           )}
                           
-                          {(status === 'COMPLETADA' || status === 'CANCELADA' || status === 'PERDIDA') && (
-                            <Badge 
-                              variant={status === 'COMPLETADA' ? 'success' : 'danger'}
-                              className="text-xs"
-                            >
-                              {status === 'COMPLETADA' ? 'Finalizada' : status === 'CANCELADA' ? 'Cancelada' : 'Perdida'}
-                            </Badge>
-                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -517,6 +509,70 @@ export default function CRMPage() {
           </div>
         )}
       </Card>
+        </>
+      ) : (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary-500" />
+                <h3 className="font-semibold">Sugerencias inteligentes</h3>
+              </div>
+              <span className="text-sm text-gray-500">{suggestions.length} sugerencias</span>
+            </div>
+          </Card>
+
+          {suggestions.length === 0 ? (
+            <Card>
+              <p className="text-gray-500">No hay sugerencias pendientes.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {suggestions.map((s) => {
+                const Icon = suggestionIcons[s.type] || Lightbulb;
+                const priorityKey = [95, 90, 85, 80, 75, 70, 60].find((k) => s.priority >= k) || 60;
+                const priorityClass = priorityColors[priorityKey];
+
+                return (
+                  <Card key={s.id} className="border border-gray-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{s.title}</p>
+                          <p className="text-sm text-gray-500 mt-1">{s.clientName}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${priorityClass}`}>
+                        {priorityLabel(s.priority)}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mt-3">{s.description}</p>
+                    <p className="text-xs text-gray-500 mt-2">{s.reason}</p>
+
+                    <div className="flex items-center justify-end gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        isLoading={applyingId === s.id}
+                        onClick={() => handleApplySuggestion(s)}
+                      >
+                        <Check className="w-4 h-4 mr-1" /> Aplicar
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDismissSuggestion(s)}>
+                        <X className="w-4 h-4 mr-1" /> Descartar
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nueva Actividad CRM" size="md">
         <div className="space-y-3">
