@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle, Eye, Clock } from 'lucide-react';
+import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle, Eye, Clock, Lightbulb, Check, X, Sparkles, User, ArrowUpRight } from 'lucide-react';
 import { activitiesApi } from '../api/activities.api';
+import { suggestionsApi } from '../api/suggestions.api';
 import { clientsApi } from '../api/Clients.api';
-import type { Activity, ActivityType, Client } from '../types';
+import type { Activity, ActivityType, Client, Suggestion } from '../types';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { staggerContainer, staggerItem } from '../utils/motion';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+type Tab = 'agenda' | 'sugerencias';
 
 const typeOptions: { value: '' | ActivityType; label: string }[] = [
   { value: '', label: 'Todos' },
@@ -21,10 +26,38 @@ const typeOptions: { value: '' | ActivityType; label: string }[] = [
   { value: 'NOTA', label: 'Nota' },
 ];
 
+const suggestionIcons: Record<string, typeof Lightbulb> = {
+  LLAMADA: CheckCircle2,
+  EMAIL: CheckCircle2,
+  REUNION: User,
+  SEGUIMIENTO: ArrowUpRight,
+  TAREA: Clock,
+};
+
+const priorityColors: Record<number, string> = {
+  95: 'bg-red-100 text-red-700 border-red-200',
+  90: 'bg-red-100 text-red-700 border-red-200',
+  85: 'bg-orange-100 text-orange-700 border-orange-200',
+  80: 'bg-orange-100 text-orange-700 border-orange-200',
+  75: 'bg-amber-100 text-amber-700 border-amber-200',
+  70: 'bg-amber-100 text-amber-700 border-amber-200',
+  60: 'bg-blue-100 text-blue-700 border-blue-200',
+};
+
+const priorityLabel = (p: number) => {
+  if (p >= 90) return 'Crítica';
+  if (p >= 75) return 'Alta';
+  if (p >= 60) return 'Media';
+  return 'Baja';
+};
+
 export default function CRMPage() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>('agenda');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionCount, setSuggestionCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'' | ActivityType>('');
@@ -32,17 +65,15 @@ export default function CRMPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  
-  // Estados para modal de detalle
+
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
-  // Estados para modal de reagendar
+
   const [activityToReschedule, setActivityToReschedule] = useState<Activity | null>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
-  
+
   const [form, setForm] = useState({
     clientId: '',
     type: 'SEGUIMIENTO' as ActivityType,
@@ -50,6 +81,8 @@ export default function CRMPage() {
     description: '',
     scheduledFor: '',
   });
+
+  const [applyingId, setApplyingId] = useState<string | null>(null);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -62,15 +95,28 @@ export default function CRMPage() {
       const data = await activitiesApi.getAllActivities();
       setActivities(data);
     } catch (error) {
-      console.error('Error loading CRM activities:', error);
       showToast('error', 'No se pudieron cargar las actividades.');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadSuggestions = async () => {
+    try {
+      const [data, count] = await Promise.all([
+        suggestionsApi.getSuggestions(),
+        suggestionsApi.getSuggestionCount(),
+      ]);
+      setSuggestions(data);
+      setSuggestionCount(count);
+    } catch (error) {
+      console.error('Error loading suggestions:', error);
+    }
+  };
+
   useEffect(() => {
     loadActivities();
+    loadSuggestions();
   }, []);
 
   useEffect(() => {
@@ -154,10 +200,9 @@ export default function CRMPage() {
 
   const rescheduleTomorrow = async (activity: Activity) => {
     setActivityToReschedule(activity);
-    // Configurar fecha por defecto para mañana
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0); // 9:00 AM por defecto
+    tomorrow.setHours(9, 0, 0, 0);
     setRescheduleDate(tomorrow.toISOString().slice(0, 16));
     setIsRescheduleOpen(true);
   };
@@ -167,7 +212,6 @@ export default function CRMPage() {
       showToast('error', 'Debe seleccionar una fecha y hora.');
       return;
     }
-
     try {
       setRescheduling(true);
       await activitiesApi.updateActivity(activityToReschedule.id, {
@@ -192,13 +236,13 @@ export default function CRMPage() {
   };
 
   const getActivityTypeInfo = (type: ActivityType) => {
-    const config = {
-      LLAMADA: { icon: '📞', color: 'text-secondary-600', label: 'Llamada' },
-      EMAIL: { icon: '📧', color: 'text-green-600', label: 'Email' },
-      REUNION: { icon: '👥', color: 'text-purple-600', label: 'Reunión' },
-      SEGUIMIENTO: { icon: '📅', color: 'text-amber-600', label: 'Seguimiento' },
-      TAREA: { icon: '✅', color: 'text-emerald-600', label: 'Tarea' },
-      NOTA: { icon: '📝', color: 'text-indigo-600', label: 'Nota' },
+    const config: Record<string, { icon: string; color: string; label: string }> = {
+      LLAMADA: { icon: '\u{1F4DE}', color: 'text-secondary-600', label: 'Llamada' },
+      EMAIL: { icon: '\u{1F4E7}', color: 'text-green-600', label: 'Email' },
+      REUNION: { icon: '\u{1F465}', color: 'text-purple-600', label: 'Reunión' },
+      SEGUIMIENTO: { icon: '\u{1F4C5}', color: 'text-amber-600', label: 'Seguimiento' },
+      TAREA: { icon: '\u2705', color: 'text-emerald-600', label: 'Tarea' },
+      NOTA: { icon: '\u{1F4DD}', color: 'text-indigo-600', label: 'Nota' },
     };
     return config[type] || config.NOTA;
   };
@@ -227,13 +271,7 @@ export default function CRMPage() {
         description: form.description.trim() || undefined,
         scheduledFor: form.scheduledFor || undefined,
       });
-      setForm({
-        clientId: '',
-        type: 'SEGUIMIENTO',
-        title: '',
-        description: '',
-        scheduledFor: '',
-      });
+      setForm({ clientId: '', type: 'SEGUIMIENTO', title: '', description: '', scheduledFor: '' });
       setIsCreateOpen(false);
       await loadActivities();
       showToast('success', 'Actividad creada.');
@@ -244,14 +282,34 @@ export default function CRMPage() {
     }
   };
 
+  const handleApplySuggestion = async (suggestion: Suggestion) => {
+    setApplyingId(suggestion.id);
+    try {
+      await suggestionsApi.applySuggestion(suggestion.id);
+      showToast('success', 'Sugerencia aplicada: actividad creada.');
+      await Promise.all([loadActivities(), loadSuggestions()]);
+    } catch {
+      showToast('error', 'Error al aplicar sugerencia.');
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
+  const handleDismissSuggestion = async (suggestion: Suggestion) => {
+    try {
+      await suggestionsApi.dismissSuggestion(suggestion.id);
+      setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+      setSuggestionCount(prev => Math.max(0, prev - 1));
+      showToast('success', 'Sugerencia descartada.');
+    } catch {
+      showToast('error', 'Error al descartar sugerencia.');
+    }
+  };
+
   return (
     <div>
       {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.message}
         </div>
       )}
@@ -259,7 +317,7 @@ export default function CRMPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900 font-display">CRM</h1>
-          <p className="text-gray-600 mt-1">Agenda comercial y seguimiento de clientes</p>
+          <p className="text-gray-600 mt-1">Agenda comercial, seguimiento y sugerencias inteligentes</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => navigate('/clients')}>
@@ -272,70 +330,85 @@ export default function CRMPage() {
         </div>
       </div>
 
-      {agenda.overdue.length > 0 && (
-        <Card className="mb-4 border border-red-200 bg-red-50">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertTriangle className="w-5 h-5" />
-            <p className="font-medium">
-              Tienes {agenda.overdue.length} actividad{agenda.overdue.length !== 1 ? 'es' : ''} vencida{agenda.overdue.length !== 1 ? 's' : ''}.
-            </p>
-          </div>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-            <h3 className="font-semibold">Vencidas</h3>
-          </div>
-          <div className="space-y-2 text-sm">
-            {agenda.overdue.slice(0, 4).map((a) => (
-              <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
-            ))}
-            {agenda.overdue.length === 0 && <p className="text-gray-400">Sin vencidas</p>}
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="w-4 h-4 text-amber-600" />
-            <h3 className="font-semibold">Hoy</h3>
-          </div>
-          <div className="space-y-2 text-sm">
-            {agenda.todayItems.slice(0, 4).map((a) => (
-              <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
-            ))}
-            {agenda.todayItems.length === 0 && <p className="text-gray-400">Sin actividades para hoy</p>}
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="w-4 h-4 text-secondary-600" />
-            <h3 className="font-semibold">Próximos 7 días</h3>
-          </div>
-          <div className="space-y-2 text-sm">
-            {agenda.nextItems.slice(0, 4).map((a) => (
-              <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
-            ))}
-            {agenda.nextItems.length === 0 && <p className="text-gray-400">Sin próximas actividades</p>}
-          </div>
-        </Card>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setTab('agenda')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'agenda' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <CalendarClock className="w-4 h-4 inline mr-2" />
+          Agenda
+        </button>
+        <button
+          onClick={() => setTab('sugerencias')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${tab === 'sugerencias' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <Sparkles className="w-4 h-4" />
+          Sugerencias
+          {suggestionCount > 0 && (
+            <span className="bg-primary-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{suggestionCount}</span>
+          )}
+        </button>
       </div>
 
-      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <motion.div variants={staggerItem}>
-          <Card interactive><p className="text-sm text-gray-500">Hoy / Próx. 7 días</p><p className="text-2xl font-semibold">{kpis.todayCount}</p></Card>
-        </motion.div>
-        <motion.div variants={staggerItem}>
-          <Card interactive><p className="text-sm text-gray-500">Pendientes</p><p className="text-2xl font-semibold">{kpis.pending}</p></Card>
-        </motion.div>
-        <motion.div variants={staggerItem}>
-          <Card interactive><p className="text-sm text-gray-500">Completadas</p><p className="text-2xl font-semibold">{kpis.completed}</p></Card>
-        </motion.div>
-        <motion.div variants={staggerItem}>
-          <Card interactive><p className="text-sm text-gray-500">Vencidas</p><p className="text-2xl font-semibold text-red-600">{kpis.overdue}</p></Card>
-        </motion.div>
-      </motion.div>
+      {tab === 'agenda' ? (
+        <>
+          {agenda.overdue.length > 0 && (
+            <Card className="mb-4 border border-red-200 bg-red-50">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertTriangle className="w-5 h-5" />
+                <p className="font-medium">
+                  Tienes {agenda.overdue.length} actividad{agenda.overdue.length !== 1 ? 'es' : ''} vencida{agenda.overdue.length !== 1 ? 's' : ''}.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <h3 className="font-semibold">Vencidas</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                {agenda.overdue.slice(0, 4).map((a) => (
+                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                ))}
+                {agenda.overdue.length === 0 && <p className="text-gray-400">Sin vencidas</p>}
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarClock className="w-4 h-4 text-amber-600" />
+                <h3 className="font-semibold">Hoy</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                {agenda.todayItems.slice(0, 4).map((a) => (
+                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                ))}
+                {agenda.todayItems.length === 0 && <p className="text-gray-400">Sin actividades para hoy</p>}
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarClock className="w-4 h-4 text-secondary-600" />
+                <h3 className="font-semibold">Próximos 7 días</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                {agenda.nextItems.slice(0, 4).map((a) => (
+                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                ))}
+                {agenda.nextItems.length === 0 && <p className="text-gray-400">Sin próximas actividades</p>}
+              </div>
+            </Card>
+          </div>
+
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <motion.div variants={staggerItem}><Card interactive><p className="text-sm text-gray-500">Hoy / Próx. 7 días</p><p className="text-2xl font-semibold">{kpis.todayCount}</p></Card></motion.div>
+            <motion.div variants={staggerItem}><Card interactive><p className="text-sm text-gray-500">Pendientes</p><p className="text-2xl font-semibold">{kpis.pending}</p></Card></motion.div>
+            <motion.div variants={staggerItem}><Card interactive><p className="text-sm text-gray-500">Completadas</p><p className="text-2xl font-semibold">{kpis.completed}</p></Card></motion.div>
+            <motion.div variants={staggerItem}><Card interactive><p className="text-sm text-gray-500">Vencidas</p><p className="text-2xl font-semibold text-red-600">{kpis.overdue}</p></Card></motion.div>
+          </motion.div>
 
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -449,58 +522,32 @@ export default function CRMPage() {
         <div className="space-y-3">
           <div>
             <label className="text-sm font-medium text-gray-700">Cliente *</label>
-            <select
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              value={form.clientId}
-              onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}
-            >
+            <select className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" value={form.clientId} onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}>
               <option value="">Seleccionar cliente...</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.clientType === 'JURIDICO'
-                    ? c.companyName
-                    : `${c.firstName || ''} ${c.lastName || ''}`.trim()}
+                  {c.clientType === 'JURIDICO' ? c.companyName : `${c.firstName || ''} ${c.lastName || ''}`.trim()}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Tipo *</label>
-            <select
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              value={form.type}
-              onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as ActivityType }))}
-            >
-              {typeOptions.filter((o) => o.value).map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
+            <select className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" value={form.type} onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as ActivityType }))}>
+              {typeOptions.filter((o) => o.value).map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Asunto *</label>
-            <input
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-            />
+            <input className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Descripción</label>
-            <textarea
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            />
+            <textarea className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" rows={3} value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Fecha programada</label>
-            <input
-              type="datetime-local"
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              value={form.scheduledFor}
-              onChange={(e) => setForm((prev) => ({ ...prev, scheduledFor: e.target.value }))}
-            />
+            <input type="datetime-local" className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" value={form.scheduledFor} onChange={(e) => setForm((prev) => ({ ...prev, scheduledFor: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
@@ -509,13 +556,8 @@ export default function CRMPage() {
         </div>
       </Modal>
 
-      {/* Modal de Reagendar */}
-      <Modal 
-        isOpen={isRescheduleOpen} 
-        onClose={() => setIsRescheduleOpen(false)} 
-        title="Reagendar Actividad" 
-        size="sm"
-      >
+      {/* Reschedule Modal */}
+      <Modal isOpen={isRescheduleOpen} onClose={() => setIsRescheduleOpen(false)} title="Reagendar Actividad" size="sm">
         <div className="space-y-4">
           {activityToReschedule && (
             <div className="bg-gray-50 p-3 rounded-xl">
@@ -527,59 +569,28 @@ export default function CRMPage() {
               </p>
             </div>
           )}
-          
           <div>
             <label className="text-sm font-medium text-gray-700">Nueva fecha y hora *</label>
-            <input
-              type="datetime-local"
-              className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              value={rescheduleDate}
-              onChange={(e) => setRescheduleDate(e.target.value)}
-            />
+            <input type="datetime-local" className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} />
           </div>
-          
           <div className="flex justify-end gap-2 pt-2">
-            <Button 
-              variant="secondary" 
-              onClick={() => setIsRescheduleOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              isLoading={rescheduling} 
-              onClick={handleReschedule}
-            >
-              Reagendar
-            </Button>
+            <Button variant="secondary" onClick={() => setIsRescheduleOpen(false)}>Cancelar</Button>
+            <Button isLoading={rescheduling} onClick={handleReschedule}>Reagendar</Button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal de Detalle */}
-      <Modal 
-        isOpen={isDetailOpen} 
-        onClose={() => setIsDetailOpen(false)} 
-        title="Detalle de Actividad" 
-        size="md"
-      >
+      {/* Detail Modal */}
+      <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title="Detalle de Actividad" size="md">
         {selectedActivity && (
           <div className="space-y-4">
-            {/* Header con tipo de actividad */}
             <div className="flex items-center gap-3">
-              <span className="text-2xl">
-                {getActivityTypeInfo(selectedActivity.type).icon}
-              </span>
+              <span className="text-2xl">{getActivityTypeInfo(selectedActivity.type).icon}</span>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {selectedActivity.title}
-                </h3>
-                <Badge variant="default" className="mt-1">
-                  {getActivityTypeInfo(selectedActivity.type).label}
-                </Badge>
+                <h3 className="text-lg font-semibold text-gray-900">{selectedActivity.title}</h3>
+                <Badge variant="default" className="mt-1">{getActivityTypeInfo(selectedActivity.type).label}</Badge>
               </div>
             </div>
-
-            {/* Estado actual */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">Estado:</span>
               <Badge 
@@ -591,8 +602,6 @@ export default function CRMPage() {
                 {selectedActivity.status || 'PENDIENTE'}
               </Badge>
             </div>
-
-            {/* Información del cliente */}
             <div className="bg-gray-50 p-3 rounded-xl">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Cliente</h4>
               <p className="font-medium">
@@ -601,39 +610,25 @@ export default function CRMPage() {
                   : `${selectedActivity.client?.firstName || ''} ${selectedActivity.client?.lastName || ''}`.trim()}
               </p>
             </div>
-
-            {/* Descripción */}
             {selectedActivity.description && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Descripción</h4>
-                <p className="text-gray-600 bg-gray-50 p-3 rounded-xl">
-                  {selectedActivity.description}
-                </p>
+                <p className="text-gray-600 bg-gray-50 p-3 rounded-xl">{selectedActivity.description}</p>
               </div>
             )}
-
-            {/* Fechas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-700">Fecha programada:</span>
-                <p className="text-gray-600">
-                  {selectedActivity.scheduledFor 
-                    ? new Date(selectedActivity.scheduledFor).toLocaleString('es-VE')
-                    : 'No programada'}
-                </p>
+                <p className="text-gray-600">{selectedActivity.scheduledFor ? new Date(selectedActivity.scheduledFor).toLocaleString('es-VE') : 'No programada'}</p>
               </div>
               <div>
                 <span className="font-medium text-gray-700">Fecha de creación:</span>
-                <p className="text-gray-600">
-                  {new Date(selectedActivity.createdAt).toLocaleString('es-VE')}
-                </p>
+                <p className="text-gray-600">{new Date(selectedActivity.createdAt).toLocaleString('es-VE')}</p>
               </div>
               {selectedActivity.user && (
                 <div>
                   <span className="font-medium text-gray-700">Asignado a:</span>
-                  <p className="text-gray-600">
-                    {selectedActivity.user.firstName} {selectedActivity.user.lastName}
-                  </p>
+                  <p className="text-gray-600">{selectedActivity.user.firstName} {selectedActivity.user.lastName}</p>
                 </div>
               )}
             </div>

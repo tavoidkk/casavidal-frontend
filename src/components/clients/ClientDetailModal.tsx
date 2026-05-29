@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Mail, Phone, MapPin, Star, ShoppingBag } from 'lucide-react';
+import { Plus, Mail, Phone, MapPin, Star, ShoppingBag, AlertTriangle, Calendar, TrendingDown } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -20,7 +20,6 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Cargar actividades del cliente
   useEffect(() => {
     if (isOpen && client.id) {
       loadActivities();
@@ -39,97 +38,56 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
     }
   };
 
-  // Crear actividad
   const handleCreateActivity = async (data: Omit<ActivityCreate, 'clientId'>) => {
     try {
-      await activitiesApi.createActivity({
-        ...data,
-        clientId: client.id,
-      });
+      await activitiesApi.createActivity({ ...data, clientId: client.id });
       await loadActivities();
       setIsActivityFormOpen(false);
       setErrorMessage('');
     } catch (error: any) {
-      console.error('Error creating activity:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Error al crear la actividad';
       setErrorMessage(errorMessage);
       throw error;
     }
   };
 
-  const clientDisplayName =
-    client.clientType === 'NATURAL'
-      ? `${client.firstName} ${client.lastName}`
-      : client.companyName;
+  const clientDisplayName = client.clientType === 'NATURAL'
+    ? `${client.firstName} ${client.lastName}`
+    : client.companyName;
+
+  const daysSinceLastPurchase = client.lastPurchaseAt
+    ? Math.floor((Date.now() - new Date(client.lastPurchaseAt).getTime()) / 86400000)
+    : null;
+
+  const churnRisk = client.scoring?.churnProbability || 0;
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`Detalle de ${clientDisplayName}`} size="xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Columna izquierda: Información del cliente */}
           <div className="lg:col-span-1 space-y-4">
-            {/* Categoría */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                Categoría
-              </label>
-              <Badge
-                variant={
-                  client.category === 'VIP'
-                    ? 'info'
-                    : client.category === 'MAYORISTA'
-                    ? 'info'
-                    : client.category === 'REGULAR'
-                    ? 'default'
-                    : client.category === 'NUEVO'
-                    ? 'success'
-                    : 'warning'
-                }
-              >
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Categoría</label>
+              <Badge variant={client.category === 'VIP' || client.category === 'MAYORISTA' ? 'info' : client.category === 'REGULAR' ? 'default' : client.category === 'NUEVO' ? 'success' : 'warning'}>
                 {client.category}
               </Badge>
             </div>
 
-            {/* Etapa y origen */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                Prospecto
-              </label>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Prospecto</label>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}
-                >
-                  {client.stage}
-                </Badge>
+                <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>{client.stage}</Badge>
                 <span className="text-xs text-gray-500">{client.source || 'Sin origen'}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">
-                Último contacto: {client.lastContactAt ? new Date(client.lastContactAt).toLocaleString('es-VE') : 'Sin registro'}
-              </p>
+              <p className="text-xs text-gray-400 mt-2">Último contacto: {client.lastContactAt ? new Date(client.lastContactAt).toLocaleString('es-VE') : 'Sin registro'}</p>
             </div>
 
-            {/* Contacto */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                Contacto
-              </label>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Contacto</label>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span>{client.phone}</span>
-                </div>
-                {client.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span>{client.email}</span>
-                  </div>
-                )}
-                {client.address && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <span className="text-gray-600">{client.address}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" /><span>{client.phone}</span></div>
+                {client.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-gray-400" /><span>{client.email}</span></div>}
+                {client.address && <div className="flex items-start gap-2 text-sm"><MapPin className="w-4 h-4 text-gray-400 mt-0.5" /><span className="text-gray-600">{client.address}</span></div>}
               </div>
             </div>
 
@@ -137,16 +95,11 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Compras totales</span>
-                <div className="flex items-center gap-1">
-                  <ShoppingBag className="w-4 h-4 text-gray-400" />
-                  <span className="font-semibold">{client.purchaseCount}</span>
-                </div>
+                <div className="flex items-center gap-1"><ShoppingBag className="w-4 h-4 text-gray-400" /><span className="font-semibold">{client.purchaseCount}</span></div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Monto total</span>
-                <span className="font-semibold text-green-600">
-                  ${client.totalPurchases.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                </span>
+                <span className="font-semibold text-green-600">${client.totalPurchases.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Puntos fidelidad</span>
@@ -155,33 +108,63 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
               {client.scoring && (
                 <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                   <span className="text-sm text-gray-600">Scoring IA</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="font-semibold">{client.scoring.score}/100</span>
-                  </div>
+                  <div className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-500" /><span className="font-semibold">{client.scoring.score}/100</span></div>
                 </div>
               )}
             </div>
+
+            {/* Scoring detallado */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Análisis de Cliente</h4>
+              {daysSinceLastPurchase !== null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Días desde última compra</span>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className={`font-semibold ${daysSinceLastPurchase > 60 ? 'text-red-600' : daysSinceLastPurchase > 30 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {daysSinceLastPurchase} días
+                    </span>
+                  </div>
+                </div>
+              )}
+              {churnRisk > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-600 flex items-center gap-1">
+                      <TrendingDown className="w-4 h-4 text-red-400" /> Riesgo de pérdida
+                    </span>
+                    <span className={`text-sm font-semibold ${churnRisk > 50 ? 'text-red-600' : churnRisk > 30 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {churnRisk}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className={`h-2 rounded-full ${churnRisk > 50 ? 'bg-red-500' : churnRisk > 30 ? 'bg-amber-500' : 'bg-green-500'}`} style={{ width: `${churnRisk}%` }} />
+                  </div>
+                  {churnRisk > 50 && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Alto riesgo — realizar seguimiento pronto
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Etapa actual</span>
+                <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>{client.stage}</Badge>
+              </div>
+            </div>
           </div>
 
-          {/* Columna derecha: Timeline de actividades */}
           <div className="lg:col-span-2">
             {errorMessage && (
-              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMessage}
-              </div>
+              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</div>
             )}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Timeline de Actividades</h3>
-              <Button
-                size="sm"
-                onClick={() => setIsActivityFormOpen(true)}
-              >
+              <Button size="sm" onClick={() => setIsActivityFormOpen(true)}>
                 <Plus className="w-4 h-4" />
                 <span>Nueva Actividad</span>
               </Button>
             </div>
-
             <div className="max-h-[500px] overflow-y-auto pr-2">
               <ActivityTimeline activities={activities} loading={loadingActivities} />
             </div>
@@ -189,7 +172,6 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
         </div>
       </Modal>
 
-      {/* Modal de crear actividad */}
       <ActivityForm
         isOpen={isActivityFormOpen}
         onClose={() => setIsActivityFormOpen(false)}
