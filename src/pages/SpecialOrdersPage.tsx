@@ -175,7 +175,7 @@ export default function SpecialOrdersPage() {
       {activeTab === 'compras' ? (
         <PurchaseOrdersTab />
       ) : (
-
+        <>
       {/* Filtros */}
       <Card className="mb-6">
         <div className="flex flex-col md:flex-row gap-4">
@@ -442,6 +442,7 @@ export default function SpecialOrdersPage() {
           </div>
         )}
       </Modal>
+        </>
       )}
     </div>
   );
