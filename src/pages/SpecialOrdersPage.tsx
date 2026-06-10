@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, ChevronRight } from 'lucide-react';
+import { Plus, Search, ChevronRight, ShoppingCart, Package } from 'lucide-react';
 import { specialOrdersApi } from '../api/specialOrders.api';
 import type { SpecialOrder, OrderStatus } from '../types';
 import { Card } from '../components/ui/Card';
@@ -9,6 +9,14 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
+import PurchaseOrdersTab from './PurchaseOrdersTab';
+
+type TabType = 'pedidos' | 'compras';
+
+const TABS: { key: TabType; label: string; icon: typeof ShoppingCart }[] = [
+  { key: 'pedidos', label: 'Pedidos Especiales', icon: ShoppingCart },
+  { key: 'compras', label: 'Órdenes de Compra', icon: Package },
+];
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -42,6 +50,7 @@ const ALL_STATUSES = Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
 export default function SpecialOrdersPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
+  const [activeTab, setActiveTab] = useState<TabType>('pedidos');
 
   const [orders, setOrders] = useState<SpecialOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,12 +140,41 @@ export default function SpecialOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 font-display">Pedidos Especiales</h1>
-          <p className="text-gray-600 mt-1">
-            {totalItems} pedido{totalItems !== 1 ? 's' : ''} registrado{totalItems !== 1 ? 's' : ''}
-          </p>
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">
+            {activeTab === 'pedidos' ? 'Pedidos Especiales' : 'Órdenes de Compra'}
+          </h1>
+          {activeTab === 'pedidos' && (
+            <p className="text-gray-600 mt-1">
+              {totalItems} pedido{totalItems !== 1 ? 's' : ''} registrado{totalItems !== 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-xl w-fit">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.key
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'compras' ? (
+        <PurchaseOrdersTab />
+      ) : (
 
       {/* Filtros */}
       <Card className="mb-6">
@@ -404,6 +442,7 @@ export default function SpecialOrdersPage() {
           </div>
         )}
       </Modal>
+      )}
     </div>
   );
 }

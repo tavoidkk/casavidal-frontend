@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ChatButton from '../chat/ChatButton';
 
 export default function Layout() {
   return (
@@ -18,6 +19,9 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Chatbot flotante */}
+      <ChatButton />
     </div>
   );
 }

@@ -210,6 +210,57 @@ export interface SpecialOrder {
   updatedAt: string;
 }
 
+// Órdenes de Compra
+export type PurchaseOrderStatus =
+  | 'BORRADOR'
+  | 'ENVIADA'
+  | 'CONFIRMADA'
+  | 'RECIBIDA_PARCIAL'
+  | 'RECIBIDA_COMPLETA'
+  | 'CANCELADA';
+
+export interface PurchaseOrder {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  supplier: {
+    id: string;
+    name: string;
+    phone?: string;
+    rif?: string;
+  };
+  status: PurchaseOrderStatus;
+  subtotal: number;
+  tax: number;
+  total: number;
+  orderDate: string;
+  expectedDate?: string;
+  receivedDate?: string;
+  notes?: string;
+  items: PurchaseOrderItem[];
+  specialOrders?: Array<{
+    id: string;
+    orderNumber: string;
+    status: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { items: number };
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchaseOrderId: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  quantityReceived: number;
+  createdAt: string;
+}
+
 // Dashboard
 export interface DashboardStats {
   salesToday: { total: number; count: number };

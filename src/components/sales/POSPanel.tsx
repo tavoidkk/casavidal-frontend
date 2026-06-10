@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSalesStore } from '../../store/sales.store';
 import { SaleCustomerSelector } from './SaleCustomerSelector';
 import { SaleProductSearch } from './SaleProductSearch';
 import { SaleItemsTable } from './SaleItemsTable';
 import { SaleSummary } from './SaleSummary';
 import { Button } from '../ui/Button';
+import SalesSuggestions from './SalesSuggestions';
 
 interface POSPanelProps {
   customerInputRef: React.RefObject<HTMLInputElement>;
@@ -48,6 +49,17 @@ export function POSPanel({
     addSaleItem(item);
   };
 
+  const handleAddSuggestion = useCallback((productId: string, productName: string, unitPrice: number) => {
+    addSaleItem({
+      productId,
+      productName,
+      category: '',
+      quantity: 1,
+      unitPrice,
+      subtotal: unitPrice,
+    });
+  }, [addSaleItem]);
+
   if (!currentSale) {
     return <div className="text-center py-12">Cargando venta...</div>;
   }
@@ -89,6 +101,13 @@ export function POSPanel({
             onNotesChange={setSaleNotes}
           />
         </div>
+
+        <SalesSuggestions
+          cartItems={currentSale.items}
+          clientId={currentSale.customer?.id}
+          onAddToCart={handleAddSuggestion}
+        />
+
         <div className="flex flex-col gap-2">
           {onHold && (
             <Button variant="secondary" onClick={onHold} disabled={!canHoldOrSave}>
