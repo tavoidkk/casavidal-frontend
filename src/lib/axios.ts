@@ -23,7 +23,7 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores de autenticación
+// Interceptor para manejar errores de autenticación y rate limiting
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -32,6 +32,15 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    }
+    if (error.response?.status === 429) {
+      // Demasiadas peticiones
+      const msg = error.response?.data?.error || 'Demasiadas peticiones, espera un momento e intenta de nuevo';
+      console.warn('⚠️ Rate limit alcanzado:', msg);
+      // Notificar al usuario si existe toast global, si no con alert
+      if (typeof window !== 'undefined' && (window as any).__notifyRateLimit) {
+        (window as any).__notifyRateLimit(msg);
+      }
     }
     return Promise.reject(error);
   }
