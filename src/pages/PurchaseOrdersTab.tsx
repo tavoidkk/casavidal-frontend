@@ -115,7 +115,7 @@ export default function PurchaseOrdersTab({ refreshKey = 0 }: PurchaseOrdersTabP
   const loadSuppliers = useCallback(async () => {
     try {
       const res = await suppliersApi.getAll({ limit: 200 });
-      setSuppliers(res.data.map((s: any) => ({ id: s.id, name: s.name })));
+      setSuppliers(res.data.map((s) => ({ id: s.id, name: s.name })));
     } catch {
       // ignore
     }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Search, X, Plus, ScanLine } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -30,33 +30,29 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
     currentStock: '0',
   });
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const response = await productsApi.getAll({ limit: 1000 });
-        setProducts(response.data);
-      } catch (error) {
-        console.error('Error loading products:', error);
-      }
-    };
-    loadProducts();
+  const loadProducts = useCallback(async (query = '') => {
+    try {
+      const response = await productsApi.getAll({
+        search: query.trim() || undefined,
+        limit: 30,
+      });
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      loadProducts(search);
+    }, search.trim() ? 250 : 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadProducts, search]);
 
   useEffect(() => {
     productsApi.getCategories().then(setCategories).catch(console.error);
   }, []);
-
-  const filteredProducts = useMemo(() => {
-    if (!search.trim()) return products;
-    const query = search.toLowerCase();
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.category?.name?.toLowerCase().includes(query) ||
-          p.sku?.toLowerCase().includes(query)
-      );
-  }, [search, products]);
 
   const handleSelectProduct = (product: Product) => {
     onSelectProduct(
@@ -131,9 +127,9 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
         </div>
       </div>
 
-      {filteredProducts.length > 0 && (
+      {products.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg max-h-80 overflow-y-auto">
-          {filteredProducts.map((product) => (
+          {products.map((product) => (
             <div key={product.id} className="p-2.5 border-b hover:bg-gray-50 cursor-pointer last:border-b-0">
               <div className="flex justify-between items-start mb-1">
                 <p className="font-medium text-gray-900 text-sm">{product.name}</p>
@@ -163,7 +159,7 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
         </div>
       )}
 
-      {filteredProducts.length === 0 && (
+      {products.length === 0 && (
         <div className="text-center py-4 text-sm text-gray-500">No se encontraron productos</div>
       )}
 

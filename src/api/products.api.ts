@@ -62,6 +62,11 @@ export const productsApi = {
     return data.data;
   },
 
+  findByCode: async (code: string) => {
+    const { data } = await api.get<ApiResponse<Product>>(`/products/code/${encodeURIComponent(code)}`);
+    return data.data;
+  },
+
   create: async (productData: CreateProductData) => {
     const { data } = await api.post<ApiResponse<Product>>('/products', productData);
     return data.data;
