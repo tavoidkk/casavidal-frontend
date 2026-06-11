@@ -1,12 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, ChevronRight, ShoppingCart, Package } from 'lucide-react';
+import { Plus, Search, ChevronRight, ShoppingCart, Package, Loader2 } from 'lucide-react';
 import { specialOrdersApi } from '../api/specialOrders.api';
-import type { SpecialOrder, OrderStatus } from '../types';
+import { clientsApi } from '../api/Clients.api';
+import { productsApi } from '../api/products.api';
+import { suppliersApi } from '../api/suppliers.api';
+import { purchaseOrdersApi } from '../api/purchaseOrders.api';
+import { activitiesApi } from '../api/activities.api';
+import { calendarEventsApi } from '../api/calendarEvents.api';
+import type { SpecialOrder, OrderStatus, Product, Client } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Select } from '../components/ui/Select';
 import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
 import PurchaseOrdersTab from './PurchaseOrdersTab';
@@ -63,6 +71,23 @@ export default function SpecialOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<SpecialOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    clientId: '',
+    supplierId: '',
+    productId: '',
+    quantity: 1,
+    purchasePrice: 0,
+    salePrice: 0,
+    shippingCost: 0,
+    estimatedDate: '',
+    notes: '',
+  });
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -85,6 +110,45 @@ export default function SpecialOrdersPage() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  useEffect(() => {
+    const fetchPickers = async () => {
+      try {
+        const [clientRes, supplierRes, productRes] = await Promise.all([
+          clientsApi.getAll({ page: 1, limit: 200 }),
+          suppliersApi.getAll({ page: 1, limit: 200 }),
+          productsApi.getAll({ page: 1, limit: 200, isActive: true }),
+        ]);
+        setClients(clientRes.data);
+        setSuppliers(supplierRes.data.map((s) => ({ id: s.id, name: s.name })));
+        setProducts(productRes.data);
+      } catch (error) {
+        console.error('Error loading pickers:', error);
+      }
+    };
+    fetchPickers();
+  }, []);
+
+  useEffect(() => {
+    if (!isSchedulingOpen) return;
+    setScheduleError(null);
+    setScheduleForm((prev) => ({
+      ...prev,
+      clientId: prev.clientId || clients[0]?.id || '',
+      supplierId: prev.supplierId || suppliers[0]?.id || '',
+      productId: prev.productId || products[0]?.id || '',
+    }));
+  }, [isSchedulingOpen, clients, suppliers, products]);
+
+  useEffect(() => {
+    const selectedProduct = products.find((p) => p.id === scheduleForm.productId);
+    if (!selectedProduct) return;
+    setScheduleForm((prev) => ({
+      ...prev,
+      purchasePrice: prev.purchasePrice || selectedProduct.costPrice,
+      salePrice: prev.salePrice || selectedProduct.salePrice,
+    }));
+  }, [scheduleForm.productId, products]);
 
   const getClientName = (order: SpecialOrder) => {
     const c = order.client;
@@ -125,6 +189,107 @@ export default function SpecialOrdersPage() {
     }
   };
 
+  const resetScheduleForm = () => {
+    setScheduleForm({
+      clientId: clients[0]?.id || '',
+      supplierId: suppliers[0]?.id || '',
+      productId: products[0]?.id || '',
+      quantity: 1,
+      purchasePrice: products[0]?.costPrice || 0,
+      salePrice: products[0]?.salePrice || 0,
+      shippingCost: 0,
+      estimatedDate: '',
+      notes: '',
+    });
+  };
+
+  const handleScheduleChange = (field: keyof typeof scheduleForm, value: string | number) => {
+    setScheduleForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCreateScheduledOrder = async () => {
+    setScheduleError(null);
+    const { clientId, productId, supplierId, quantity, purchasePrice, salePrice, shippingCost, estimatedDate, notes } = scheduleForm;
+    if (!clientId || !productId || !supplierId || !quantity) {
+      setScheduleError('Selecciona cliente, producto, proveedor y cantidad válida.');
+      return;
+    }
+    setIsScheduling(true);
+    try {
+      const supplier = suppliers.find((s) => s.id === supplierId);
+      const product = products.find((p) => p.id === productId);
+      const client = clients.find((c) => c.id === clientId);
+      const extraNotes = [
+        `Venta prevista: $${salePrice}`,
+        shippingCost ? `Costo de envío: $${shippingCost}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      const specialOrder = await specialOrdersApi.create({
+        clientId,
+        productId,
+        quantity,
+        estimatedDate: estimatedDate || undefined,
+        notes: [
+          notes,
+          `Compra planificada con ${supplier?.name || 'proveedor'}`,
+          extraNotes,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      });
+      await purchaseOrdersApi.create({
+        supplierId,
+        expectedDate: estimatedDate || undefined,
+        notes: `Pedido especial ${specialOrder.orderNumber} · Producto: ${product?.name || '—'} · Cliente: ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.companyName || 'Sin nombre' : 'Sin cliente'}`,
+        items: [
+          {
+            productId,
+            quantity,
+            unitPrice: purchasePrice || product?.costPrice || 0,
+          },
+        ],
+      });
+      const followUp = estimatedDate ? new Date(estimatedDate) : new Date();
+      const beforeArrival = new Date(followUp);
+      beforeArrival.setDate(beforeArrival.getDate() - 2);
+      const clientLabel = client
+        ? client.clientType === 'JURIDICO'
+          ? client.companyName || 'Sin nombre'
+          : `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Sin nombre'
+        : 'Cliente sin identificar';
+      await activitiesApi.createActivity({
+        clientId,
+        type: 'SEGUIMIENTO',
+        title: `Seguimiento pedido especial ${specialOrder.orderNumber}`,
+        description: `Revisar llegada de ${product?.name || 'producto'} desde ${supplier?.name || 'proveedor'} y coordinar notificación a ${clientLabel}.`,
+        scheduledFor: beforeArrival.toISOString(),
+      });
+      await activitiesApi.createActivity({
+        clientId,
+        type: 'TAREA',
+        title: `Entregar pedido ${specialOrder.orderNumber}`,
+        description: `Confirmar recepción y entrega de ${product?.name || 'producto'} a ${clientLabel}.`,
+        scheduledFor: followUp.toISOString(),
+      });
+      await calendarEventsApi.create({
+        title: `Entrega pedido ${specialOrder.orderNumber}`,
+        category: 'TAREA',
+        startDate: followUp.toISOString(),
+        allDay: true,
+        clientId,
+      });
+      loadOrders();
+      setIsSchedulingOpen(false);
+      resetScheduleForm();
+    } catch (error) {
+      console.error('Error creando pedido especial programado:', error);
+      setScheduleError('No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
   const filteredOrders = orders.filter((o) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -149,6 +314,12 @@ export default function SpecialOrdersPage() {
             </p>
           )}
         </div>
+        {activeTab === 'pedidos' && canEdit && (
+          <Button onClick={() => setIsSchedulingOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Programar pedido especial
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -329,6 +500,106 @@ export default function SpecialOrdersPage() {
           </>
         )}
       </Card>
+
+      <Modal
+        isOpen={isSchedulingOpen}
+        onClose={() => setIsSchedulingOpen(false)}
+        title="Programar pedido especial"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Select
+              label="Cliente"
+              value={scheduleForm.clientId}
+              onChange={(e) => handleScheduleChange('clientId', e.target.value)}
+              options={[{ value: '', label: 'Selecciona un cliente' }, ...clients.map((c) => ({
+                value: c.id,
+                label: c.clientType === 'JURIDICO'
+                  ? c.companyName || 'Sin nombre'
+                  : `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Sin nombre',
+              }))]}
+            />
+            <Select
+              label="Proveedor"
+              value={scheduleForm.supplierId}
+              onChange={(e) => handleScheduleChange('supplierId', e.target.value)}
+              options={[{ value: '', label: 'Selecciona proveedor' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Select
+              label="Producto"
+              value={scheduleForm.productId}
+              onChange={(e) => handleScheduleChange('productId', e.target.value)}
+              options={[{ value: '', label: 'Selecciona producto' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · SKU: ${p.sku}` }))]}
+            />
+            <Input
+              label="Cantidad"
+              type="number"
+              min={1}
+              value={scheduleForm.quantity}
+              onChange={(e) => handleScheduleChange('quantity', Number(e.target.value))}
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <Input
+              label="Precio compra"
+              type="number"
+              min={0}
+              step={0.01}
+              value={scheduleForm.purchasePrice}
+              onChange={(e) => handleScheduleChange('purchasePrice', Number(e.target.value))}
+            />
+            <Input
+              label="Precio venta"
+              type="number"
+              min={0}
+              step={0.01}
+              value={scheduleForm.salePrice}
+              onChange={(e) => handleScheduleChange('salePrice', Number(e.target.value))}
+            />
+            <Input
+              label="Costo envío"
+              type="number"
+              min={0}
+              step={0.01}
+              value={scheduleForm.shippingCost}
+              onChange={(e) => handleScheduleChange('shippingCost', Number(e.target.value))}
+            />
+          </div>
+          <Input
+            label="Fecha estimada de llegada"
+            type="date"
+            value={scheduleForm.estimatedDate}
+            onChange={(e) => handleScheduleChange('estimatedDate', e.target.value)}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notas internas</label>
+            <textarea
+              value={scheduleForm.notes}
+              onChange={(e) => handleScheduleChange('notes', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+              rows={3}
+            />
+          </div>
+          {scheduleError && <p className="text-sm text-red-600">{scheduleError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setIsSchedulingOpen(false)}>
+              Cancelar
+            </Button>
+            <Button isLoading={isScheduling} onClick={handleCreateScheduledOrder}>
+              {isScheduling ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Guardando...
+                </span>
+              ) : (
+                'Programar pedido'
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal Detalle */}
       <Modal
