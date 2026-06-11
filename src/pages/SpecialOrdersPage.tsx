@@ -67,6 +67,7 @@ export default function SpecialOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [poRefreshKey, setPoRefreshKey] = useState(0);
 
   const [selectedOrder, setSelectedOrder] = useState<SpecialOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -252,6 +253,7 @@ export default function SpecialOrdersPage() {
           },
         ],
       });
+      setPoRefreshKey((key) => key + 1);
       const followUp = estimatedDate ? new Date(estimatedDate) : new Date();
       const beforeArrival = new Date(followUp);
       beforeArrival.setDate(beforeArrival.getDate() - 2);
@@ -284,6 +286,7 @@ export default function SpecialOrdersPage() {
       loadOrders();
       setIsSchedulingOpen(false);
       resetScheduleForm();
+      setActiveTab('compras');
     } catch (error) {
       console.error('Error creando pedido especial programado:', error);
       const axiosError = error as { response?: { data?: { message?: string; errors?: { message?: string }[] }; status?: number } };
@@ -358,7 +361,7 @@ export default function SpecialOrdersPage() {
       </div>
 
       {activeTab === 'compras' ? (
-        <PurchaseOrdersTab />
+        <PurchaseOrdersTab refreshKey={poRefreshKey} />
       ) : (
         <>
       {/* Filtros */}

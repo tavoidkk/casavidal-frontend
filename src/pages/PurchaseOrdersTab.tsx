@@ -49,7 +49,11 @@ interface POFormItem {
   unitPrice: number;
 }
 
-export default function PurchaseOrdersTab() {
+type PurchaseOrdersTabProps = {
+  refreshKey?: number;
+};
+
+export default function PurchaseOrdersTab({ refreshKey = 0 }: PurchaseOrdersTabProps) {
   const { user } = useAuthStore();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
 
@@ -100,6 +104,12 @@ export default function PurchaseOrdersTab() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  useEffect(() => {
+    if (refreshKey > 0) {
+      loadOrders();
+    }
+  }, [refreshKey, loadOrders]);
 
   // Load suppliers for create form
   const loadSuppliers = useCallback(async () => {
