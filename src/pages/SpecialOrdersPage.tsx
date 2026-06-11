@@ -460,22 +460,25 @@ export default function SpecialOrdersPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex gap-1">
-                            <button
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="!px-3 !py-1.5 !text-xs text-gray-600 hover:text-primary-600 hover:bg-primary-50"
                               onClick={() => { setSelectedOrder(order); setIsDetailOpen(true); }}
-                              className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-xl"
                             >
-                              Ver
-                            </button>
+                              Ver detalle
+                            </Button>
                             {canEdit && next && order.status !== 'CANCELADO' && (
-                              <button
+                              <Button
+                                size="sm"
+                                className="!px-3 !py-1.5 !text-xs bg-primary-500 hover:bg-primary-600 text-white"
                                 onClick={() => handleAdvanceStatus(order)}
                                 disabled={isUpdating}
-                                className="text-xs px-2 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-xl flex items-center gap-1"
                               >
                                 <ChevronRight className="w-3 h-3" />
                                 {STATUS_CONFIG[next].label}
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
