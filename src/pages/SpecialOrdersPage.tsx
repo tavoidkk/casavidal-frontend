@@ -284,6 +284,10 @@ export default function SpecialOrdersPage() {
       resetScheduleForm();
     } catch (error) {
       console.error('Error creando pedido especial programado:', error);
+      const axiosError = error as { response?: { data?: unknown; status?: number } };
+      if (axiosError.response?.data) {
+        console.error('Detalle del error:', axiosError.response.data);
+      }
       setScheduleError('No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.');
     } finally {
       setIsScheduling(false);
