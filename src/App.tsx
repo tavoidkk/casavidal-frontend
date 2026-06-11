@@ -1,32 +1,62 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, type ComponentType, type LazyExoticComponent, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { pageTransition } from './utils/motion';
+import PageLoader from './components/ui/PageLoader';
 import { useAuthStore } from '../src/store/auth.store';
 
 // Pages
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ClientsPage from './pages/ClientsPage';
-import ProductsPage from './pages/ProductsPage';
-import SalesPage from './pages/SalesPage';
-import QuotationsPage from './pages/QuotationsPage';
-import SpecialOrdersPage from './pages/SpecialOrdersPage';
-import SuppliersPage from './pages/SuppliersPage';
-import CRMPage from './pages/CRMPage';
-import SettingsPage from './pages/SettingsPage';
-import CalendarPage from './pages/CalendarPage';
-import NotificationsPage from './pages/NotificationsPage';
-import ReportsPage from './pages/ReportsPage';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const SalesPage = lazy(() => import('./pages/SalesPage'));
+const QuotationsPage = lazy(() => import('./pages/QuotationsPage'));
+const SpecialOrdersPage = lazy(() => import('./pages/SpecialOrdersPage'));
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
+const CRMPage = lazy(() => import('./pages/CRMPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
 // Layout
 import Layout from './components/layout/Layout';
+
+type PageRoute = {
+  path: string;
+  Component: LazyExoticComponent<ComponentType<unknown>>;
+};
+
+const pageRoutes: PageRoute[] = [
+  { path: 'dashboard', Component: DashboardPage },
+  { path: 'clients', Component: ClientsPage },
+  { path: 'products', Component: ProductsPage },
+  { path: 'sales', Component: SalesPage },
+  { path: 'quotations', Component: QuotationsPage },
+  { path: 'crm', Component: CRMPage },
+  { path: 'calendar', Component: CalendarPage },
+  { path: 'reports', Component: ReportsPage },
+  { path: 'special-orders', Component: SpecialOrdersPage },
+  { path: 'suppliers', Component: SuppliersPage },
+  { path: 'settings', Component: SettingsPage },
+  { path: 'notifications', Component: NotificationsPage },
+];
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
+
+const AsyncPage = ({ Component }: { Component: PageRoute['Component'] }) => (
+  <Suspense fallback={<PageLoader />}>
+    <motion.div {...pageTransition} className="h-full">
+      <Component />
+    </motion.div>
+  </Suspense>
+);
 
 function App() {
   const initAuth = useAuthStore((state) => state.initAuth);
@@ -37,7 +67,7 @@ function App() {
   }, [initAuth]);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
         {/* Ruta pública */}
         <Route
@@ -59,102 +89,9 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route
-            path="dashboard"
-            element={
-              <motion.div {...pageTransition}>
-                <DashboardPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="clients"
-            element={
-              <motion.div {...pageTransition}>
-                <ClientsPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="products"
-            element={
-              <motion.div {...pageTransition}>
-                <ProductsPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="sales"
-            element={
-              <motion.div {...pageTransition}>
-                <SalesPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="quotations"
-            element={
-              <motion.div {...pageTransition}>
-                <QuotationsPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="crm"
-            element={
-              <motion.div {...pageTransition}>
-                <CRMPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="calendar"
-            element={
-              <motion.div {...pageTransition}>
-                <CalendarPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="reports"
-            element={
-              <motion.div {...pageTransition}>
-                <ReportsPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="special-orders"
-            element={
-              <motion.div {...pageTransition}>
-                <SpecialOrdersPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="suppliers"
-            element={
-              <motion.div {...pageTransition}>
-                <SuppliersPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="settings"
-            element={
-              <motion.div {...pageTransition}>
-                <SettingsPage />
-              </motion.div>
-            }
-          />
-          <Route
-            path="notifications"
-            element={
-              <motion.div {...pageTransition}>
-                <NotificationsPage />
-              </motion.div>
-            }
-          />
+          {pageRoutes.map(({ path, Component }) => (
+            <Route key={path} path={path} element={<AsyncPage Component={Component} />} />
+          ))}
         </Route>
 
         {/* Ruta 404 */}
