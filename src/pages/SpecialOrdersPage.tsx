@@ -239,9 +239,10 @@ export default function SpecialOrdersPage() {
           .filter(Boolean)
           .join(' · '),
       });
+      const expectedTimestamp = estimatedDateTime ? new Date(estimatedDateTime).getTime() : undefined;
       await purchaseOrdersApi.create({
         supplierId,
-        expectedDate: estimatedDate || undefined,
+        expectedDate: expectedTimestamp,
         notes: `Pedido especial ${specialOrder.orderNumber} · Producto: ${product?.name || '—'} · Cliente: ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.companyName || 'Sin nombre' : 'Sin cliente'}`,
         items: [
           {
