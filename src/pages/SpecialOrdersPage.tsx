@@ -284,11 +284,13 @@ export default function SpecialOrdersPage() {
       resetScheduleForm();
     } catch (error) {
       console.error('Error creando pedido especial programado:', error);
-      const axiosError = error as { response?: { data?: unknown; status?: number } };
+      const axiosError = error as { response?: { data?: { message?: string; errors?: { message?: string }[] }; status?: number } };
+      let message = 'No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.';
       if (axiosError.response?.data) {
         console.error('Detalle del error:', axiosError.response.data);
+        message = axiosError.response.data.errors?.[0]?.message || axiosError.response.data.message || message;
       }
-      setScheduleError('No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.');
+      setScheduleError(message);
     } finally {
       setIsScheduling(false);
     }
