@@ -239,16 +239,16 @@ export default function SpecialOrdersPage() {
           .filter(Boolean)
           .join(' · '),
       });
-      const expectedTimestamp = estimatedDateTime ? new Date(estimatedDateTime).getTime() : undefined;
+      const expectedDateISO = estimatedDate ? new Date(`${estimatedDate}T09:00:00`).toISOString() : undefined;
       await purchaseOrdersApi.create({
         supplierId,
-        expectedDate: expectedTimestamp,
+        expectedDate: expectedDateISO,
         notes: `Pedido especial ${specialOrder.orderNumber} · Producto: ${product?.name || '—'} · Cliente: ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.companyName || 'Sin nombre' : 'Sin cliente'}`,
         items: [
           {
             productId,
-            quantity,
-            unitPrice: purchasePrice || product?.costPrice || 0,
+            quantity: Number(quantity),
+            unitPrice: Number(purchasePrice || product?.costPrice || 0),
           },
         ],
       });
