@@ -225,11 +225,12 @@ export default function SpecialOrdersPage() {
       ]
         .filter(Boolean)
         .join(' · ');
+      const estimatedDateTime = estimatedDate ? new Date(`${estimatedDate}T09:00:00`).toISOString() : undefined;
       const specialOrder = await specialOrdersApi.create({
         clientId,
         productId,
         quantity,
-        estimatedDate: estimatedDate || undefined,
+        estimatedDate: estimatedDateTime,
         notes: [
           notes,
           `Compra planificada con ${supplier?.name || 'proveedor'}`,
@@ -288,7 +289,13 @@ export default function SpecialOrdersPage() {
       let message = 'No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.';
       if (axiosError.response?.data) {
         console.error('Detalle del error:', axiosError.response.data);
-        message = axiosError.response.data.errors?.[0]?.message || axiosError.response.data.message || message;
+        const validationErrors = axiosError.response.data.errors;
+        if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+          console.error('Validation errors:', validationErrors);
+          message = validationErrors.map((e) => e.message).filter(Boolean).join(' · ') || message;
+        } else {
+          message = axiosError.response.data.message || message;
+        }
       }
       setScheduleError(message);
     } finally {
