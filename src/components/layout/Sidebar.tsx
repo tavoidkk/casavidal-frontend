@@ -19,6 +19,14 @@ const menuItems = [
 
 export default function Sidebar() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const stored = window.localStorage.getItem('sidebarCollapsed');
+    return stored === 'true';
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem('sidebarCollapsed', String(isCollapsed));
+  }, [isCollapsed]);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -35,9 +43,13 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="w-64 bg-primary-500 border-r border-primary-600 flex flex-col">
+    <div
+      className={`bg-primary-500 border-r border-primary-600 flex flex-col transition-[width] duration-300 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      }`}
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-primary-600">
+      <div className="px-4 py-5 border-b border-primary-600 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {logoUrl ? (
             <img
@@ -50,25 +62,43 @@ export default function Sidebar() {
               CV
             </div>
           )}
-          <div>
-            <h1 className="text-xl font-semibold text-white font-display">CasaVidal</h1>
-            <p className="text-xs text-primary-100">Sistema de Gestión</p>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-xl font-semibold text-white font-display">CasaVidal</h1>
+              <p className="text-xs text-primary-100">Sistema de Gestión</p>
+            </div>
+          )}
         </div>
+        <button
+          type="button"
+          aria-label={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+          className="text-white/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-white rounded-full p-1"
+          onClick={() => setIsCollapsed((prev) => !prev)}
+        >
+          {isCollapsed ? (
+            <span className="text-sm font-semibold">›</span>
+          ) : (
+            <span className="text-sm font-semibold">‹</span>
+          )}
+        </button>
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 space-y-2">
         {menuItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-white/20 text-white shadow-sm backdrop-blur-sm' : 'text-primary-100 hover:bg-primary-600/50 hover:text-white'}`
+              `flex items-center px-3 py-3 rounded-xl transition-all ${isCollapsed ? 'justify-center gap-0' : 'gap-3'} ${
+                isActive
+                  ? 'bg-white/20 text-white shadow-sm backdrop-blur-sm'
+                  : 'text-primary-100 hover:bg-primary-600/50 hover:text-white'
+              }`
             }
           >
-            <item.icon className="w-5 h-5 mr-3" />
-            <span className="font-medium">{item.label}</span>
+            <item.icon className="w-5 h-5" />
+            {!isCollapsed && <span className="font-medium">{item.label}</span>}
           </NavLink>
         ))}
       </nav>
