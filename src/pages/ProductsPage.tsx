@@ -13,6 +13,7 @@ import { ProductForm } from '../components/products/ProductForm';
 import { StockAdjustModal } from '../components/products/StockAdjustModal';
 import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
+import { buildCacheKey, cachedFetch } from '../lib/requestCache';
 
 export default function ProductsPage() {
   const { user } = useAuthStore();
@@ -33,16 +34,31 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (options?: { skipCache?: boolean }) => {
     setLoading(true);
     try {
-      const response = await productsApi.getAll({
+      const params = {
         search,
-        categoryId: categoryFilter,
-        lowStock: lowStockFilter || undefined,
+        categoryFilter,
+        lowStockFilter,
         page: currentPage,
-        limit: 15,
-      });
+      };
+      const cacheKey = buildCacheKey('products:list', params);
+      const response = await cachedFetch(
+        cacheKey,
+        () =>
+          productsApi.getAll({
+            search,
+            categoryId: categoryFilter,
+            lowStock: lowStockFilter || undefined,
+            page: currentPage,
+            limit: 15,
+          }),
+        {
+          ttl: 30_000,
+          skipCache: options?.skipCache,
+        }
+      );
       setProducts(response.data);
       setTotalPages(response.pagination.totalPages);
     } catch (error) {
@@ -53,7 +69,9 @@ export default function ProductsPage() {
   }, [search, categoryFilter, lowStockFilter, currentPage]);
 
   useEffect(() => {
-    productsApi.getCategories().then(setCategories).catch(console.error);
+    cachedFetch('products:categories', () => productsApi.getCategories(), { ttl: 5 * 60 * 1000 })
+      .then(setCategories)
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -84,7 +102,7 @@ export default function ProductsPage() {
       }
       setIsFormOpen(false);
       setSelectedProduct(null);
-      loadProducts();
+      loadProducts({ skipCache: true });
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string } } };
       alert(axiosError.response?.data?.error || 'Error al guardar producto');
@@ -99,7 +117,7 @@ export default function ProductsPage() {
       await productsApi.adjustStock({ productId, ...data });
       setIsStockOpen(false);
       setSelectedProduct(null);
-      loadProducts();
+      loadProducts({ skipCache: true });
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string } } };
       alert(axiosError.response?.data?.error || 'Error al ajustar stock');
@@ -112,7 +130,7 @@ export default function ProductsPage() {
     if (!confirm('¿Estás seguro de desactivar este producto?')) return;
     try {
       await productsApi.delete(id);
-      loadProducts();
+      loadProducts({ skipCache: true });
     } catch {
       alert('Error al eliminar producto');
     }

@@ -18,6 +18,7 @@ import type { DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../t
 import { staggerContainer, staggerItem } from '../utils/motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cachedFetch } from '../lib/requestCache';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -33,12 +34,12 @@ export default function DashboardPage() {
     const loadAll = async () => {
       try {
         const [s, t, tp, tc, pa, sc] = await Promise.all([
-          dashboardApi.getStats(),
-          dashboardApi.getSalesTrend(14),
-          dashboardApi.getTopProducts(5),
-          dashboardApi.getTopClients(5),
-          dashboardApi.getPendingActivities(),
-          suggestionsApi.getSuggestionCount().catch(() => 0),
+          cachedFetch('dashboard:stats', () => dashboardApi.getStats()),
+          cachedFetch('dashboard:sales-trend', () => dashboardApi.getSalesTrend(14)),
+          cachedFetch('dashboard:top-products', () => dashboardApi.getTopProducts(5)),
+          cachedFetch('dashboard:top-clients', () => dashboardApi.getTopClients(5)),
+          cachedFetch('dashboard:pending', () => dashboardApi.getPendingActivities()),
+          cachedFetch('dashboard:suggestions-count', () => suggestionsApi.getSuggestionCount()).catch(() => 0),
         ]);
         setStats(s);
         setTrend(t);
