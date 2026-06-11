@@ -201,8 +201,21 @@ export default function CalendarPage() {
   }, [events]);
 
   const bookingStep = useMemo(() => {
-    return bookingSettings?.intervalMinutes ?? 30;
+    const step = bookingSettings?.intervalMinutes ?? 30;
+    const normalizedStep = Number(step);
+    if (!Number.isFinite(normalizedStep) || normalizedStep < 5) {
+      return 30;
+    }
+    return Math.max(5, Math.round(normalizedStep));
   }, [bookingSettings]);
+
+  const parseBookingTime = (value?: string) => {
+    if (!value || !/^[0-2]\d:[0-5]\d$/.test(value)) return null;
+    const [hours, minutes] = value.split(':').map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const date = new Date(`2000-01-01T${value}:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
 
 
   const handleCreateEventType = async () => {
@@ -223,6 +236,12 @@ export default function CalendarPage() {
 
   const handleUpdateBookingSettings = async () => {
     if (!bookingSettings) {
+      return;
+    }
+    const start = parseBookingTime(bookingSettings.startTime);
+    const end = parseBookingTime(bookingSettings.endTime);
+    if (!start || !end || start >= end) {
+      alert('Revisa la hora de inicio y fin. El inicio debe ser anterior al fin.');
       return;
     }
     const updated = await bookingSettingsApi.update(bookingSettings);
@@ -353,25 +372,25 @@ export default function CalendarPage() {
       </Card>
 
       <Card className="calendar-shell">
-        <BigCalendar
-          localizer={localizer}
-          events={calendarEvents}
-          startAccessor="start"
-          endAccessor="end"
-          views={['day', 'week', 'month']}
-          view={calendarView}
-          onView={(view) => setCalendarView(view)}
-          selectable
-          resizable
-          onSelectSlot={(slot) => handleSelectSlot({ start: slot.start as Date, end: slot.end as Date })}
-          onSelectEvent={handleSelectEvent}
-          onEventResize={handleEventResize}
-          step={bookingStep}
-          timeslots={2}
-          min={bookingSettings ? new Date(`2000-01-01T${bookingSettings.startTime}:00`) : undefined}
-          max={bookingSettings ? new Date(`2000-01-01T${bookingSettings.endTime}:00`) : undefined}
-          style={{ height: 720 }}
-        />
+          <BigCalendar
+            localizer={localizer}
+            events={calendarEvents}
+            startAccessor="start"
+            endAccessor="end"
+            views={['day', 'week', 'month']}
+            view={calendarView}
+            onView={(view) => setCalendarView(view)}
+            selectable
+            resizable
+            onSelectSlot={(slot) => handleSelectSlot({ start: slot.start as Date, end: slot.end as Date })}
+            onSelectEvent={handleSelectEvent}
+            onEventResize={handleEventResize}
+            step={bookingStep}
+            timeslots={2}
+            min={parseBookingTime(bookingSettings?.startTime) ?? undefined}
+            max={parseBookingTime(bookingSettings?.endTime) ?? undefined}
+            style={{ height: 720 }}
+          />
         {loading && <p className="text-sm text-gray-500 mt-3">Cargando eventos...</p>}
       </Card>
 
@@ -450,26 +469,32 @@ export default function CalendarPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Hora inicio"
-                type="time"
-                value={bookingSettings.startTime}
-                onChange={(e) => setBookingSettings((prev) => prev ? { ...prev, startTime: e.target.value } : prev)}
-              />
-              <Input
-                label="Hora fin"
-                type="time"
-                value={bookingSettings.endTime}
-                onChange={(e) => setBookingSettings((prev) => prev ? { ...prev, endTime: e.target.value } : prev)}
-              />
+          <Input
+            label="Hora inicio"
+            type="time"
+            value={bookingSettings.startTime}
+            onChange={(e) => setBookingSettings((prev) => prev ? { ...prev, startTime: e.target.value } : prev)}
+          />
+          <Input
+            label="Hora fin"
+            type="time"
+            value={bookingSettings.endTime}
+            onChange={(e) => setBookingSettings((prev) => prev ? { ...prev, endTime: e.target.value } : prev)}
+          />
             </div>
-            <Input
-              label="Intervalo (minutos)"
-              type="number"
-              min={5}
-              value={bookingSettings.intervalMinutes}
-              onChange={(e) => setBookingSettings((prev) => prev ? { ...prev, intervalMinutes: Number(e.target.value) } : prev)}
-            />
+          <Input
+            label="Intervalo (minutos)"
+            type="number"
+            min={5}
+            step={5}
+            value={bookingSettings.intervalMinutes}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              setBookingSettings((prev) =>
+                prev ? { ...prev, intervalMinutes: Number.isFinite(value) ? value : prev.intervalMinutes } : prev
+              );
+            }}
+          />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Zona horaria</label>
               <select
