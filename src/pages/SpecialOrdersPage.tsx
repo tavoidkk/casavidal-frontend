@@ -241,7 +241,7 @@ export default function SpecialOrdersPage() {
           .join(' · '),
       });
       const expectedDateISO = estimatedDate ? new Date(`${estimatedDate}T09:00:00`).toISOString() : undefined;
-      await purchaseOrdersApi.create({
+      const purchaseOrder = await purchaseOrdersApi.create({
         supplierId,
         expectedDate: expectedDateISO,
         notes: `Pedido especial ${specialOrder.orderNumber} · Producto: ${product?.name || '—'} · Cliente: ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.companyName || 'Sin nombre' : 'Sin cliente'}`,
@@ -253,6 +253,21 @@ export default function SpecialOrdersPage() {
           },
         ],
       });
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === specialOrder.id
+            ? {
+                ...order,
+                status: 'ORDEN_GENERADA',
+                purchaseOrder: {
+                  id: purchaseOrder.id,
+                  orderNumber: purchaseOrder.orderNumber,
+                  status: purchaseOrder.status,
+                },
+              }
+            : order
+        )
+      );
       setPoRefreshKey((key) => key + 1);
       const followUp = estimatedDate ? new Date(estimatedDate) : new Date();
       const beforeArrival = new Date(followUp);
