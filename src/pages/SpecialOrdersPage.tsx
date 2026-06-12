@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, ChevronRight, ShoppingCart, Package, Loader2 } from 'lucide-react';
+import { Plus, Search, ChevronRight, Loader2 } from 'lucide-react';
 import { specialOrdersApi } from '../api/specialOrders.api';
 import { clientsApi } from '../api/Clients.api';
 import { productsApi } from '../api/products.api';
 import { suppliersApi } from '../api/suppliers.api';
-import { purchaseOrdersApi } from '../api/purchaseOrders.api';
 import { activitiesApi } from '../api/activities.api';
 import { calendarEventsApi } from '../api/calendarEvents.api';
-import type { SpecialOrder, OrderStatus, Product, Client } from '../types';
+import type { SpecialOrder, OrderStatus, Product, Client, PaymentMethod } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -17,14 +16,6 @@ import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
 import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
-import PurchaseOrdersTab from './PurchaseOrdersTab';
-
-type TabType = 'pedidos' | 'compras';
-
-const TABS: { key: TabType; label: string; icon: typeof ShoppingCart }[] = [
-  { key: 'pedidos', label: 'Pedidos Especiales', icon: ShoppingCart },
-  { key: 'compras', label: 'Órdenes de Compra', icon: Package },
-];
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -35,6 +26,22 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'in
   ENTREGADO: { label: 'Entregado', color: 'default' },
   CANCELADO: { label: 'Cancelado', color: 'danger' },
 };
+
+const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: 'EFECTIVO', label: 'Efectivo' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia' },
+  { value: 'PUNTO_VENTA', label: 'Punto de venta' },
+  { value: 'PAGO_MOVIL', label: 'Pago móvil' },
+  { value: 'ZELLE', label: 'Zelle' },
+];
+
+const formatPaymentMethodLabel = (method?: PaymentMethod) =>
+  method
+    ? method
+        .split('_')
+        .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+        .join(' ')
+    : '—';
 
 const STATUS_FLOW: OrderStatus[] = [
   'PENDIENTE',
@@ -58,7 +65,6 @@ const ALL_STATUSES = Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
 export default function SpecialOrdersPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
-  const [activeTab, setActiveTab] = useState<TabType>('pedidos');
 
   const [orders, setOrders] = useState<SpecialOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +73,6 @@ export default function SpecialOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [poRefreshKey, setPoRefreshKey] = useState(0);
 
   const [selectedOrder, setSelectedOrder] = useState<SpecialOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -86,6 +91,8 @@ export default function SpecialOrdersPage() {
     purchasePrice: 0,
     salePrice: 0,
     shippingCost: 0,
+    paymentMethod: 'TRANSFERENCIA' as PaymentMethod,
+    supplierPaymentMethod: '',
     estimatedDate: '',
     notes: '',
   });
@@ -163,7 +170,7 @@ export default function SpecialOrdersPage() {
     setIsUpdating(true);
     try {
       await specialOrdersApi.updateStatus(order.id, next);
-      loadOrders();
+      await loadOrders();
       if (selectedOrder?.id === order.id) {
         const updated = await specialOrdersApi.getById(order.id);
         setSelectedOrder(updated);
@@ -181,7 +188,7 @@ export default function SpecialOrdersPage() {
     setIsUpdating(true);
     try {
       await specialOrdersApi.updateStatus(order.id, 'CANCELADO');
-      loadOrders();
+      await loadOrders();
       setIsDetailOpen(false);
     } catch {
       alert('Error al cancelar pedido');
@@ -199,6 +206,8 @@ export default function SpecialOrdersPage() {
       purchasePrice: products[0]?.costPrice || 0,
       salePrice: products[0]?.salePrice || 0,
       shippingCost: 0,
+      paymentMethod: 'TRANSFERENCIA',
+      supplierPaymentMethod: '',
       estimatedDate: '',
       notes: '',
     });
@@ -210,65 +219,47 @@ export default function SpecialOrdersPage() {
 
   const handleCreateScheduledOrder = async () => {
     setScheduleError(null);
-    const { clientId, productId, supplierId, quantity, purchasePrice, salePrice, shippingCost, estimatedDate, notes } = scheduleForm;
+    const {
+      clientId,
+      productId,
+      supplierId,
+      quantity,
+      purchasePrice,
+      salePrice,
+      shippingCost,
+      paymentMethod,
+      supplierPaymentMethod,
+      estimatedDate,
+      notes,
+    } = scheduleForm;
+
     if (!clientId || !productId || !supplierId || !quantity) {
       setScheduleError('Selecciona cliente, producto, proveedor y cantidad válida.');
       return;
     }
+
     setIsScheduling(true);
     try {
       const supplier = suppliers.find((s) => s.id === supplierId);
       const product = products.find((p) => p.id === productId);
       const client = clients.find((c) => c.id === clientId);
-      const extraNotes = [
-        `Venta prevista: $${salePrice}`,
-        shippingCost ? `Costo de envío: $${shippingCost}` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ');
+
       const estimatedDateTime = estimatedDate ? new Date(`${estimatedDate}T09:00:00`).toISOString() : undefined;
-      const specialOrder = await specialOrdersApi.create({
+
+      const createdOrder = await specialOrdersApi.create({
         clientId,
         productId,
-        quantity,
-        estimatedDate: estimatedDateTime,
-        notes: [
-          notes,
-          `Compra planificada con ${supplier?.name || 'proveedor'}`,
-          extraNotes,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      });
-      const expectedDateISO = estimatedDate ? new Date(`${estimatedDate}T09:00:00`).toISOString() : undefined;
-      const purchaseOrder = await purchaseOrdersApi.create({
         supplierId,
-        expectedDate: expectedDateISO,
-        notes: `Pedido especial ${specialOrder.orderNumber} · Producto: ${product?.name || '—'} · Cliente: ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.companyName || 'Sin nombre' : 'Sin cliente'}`,
-        items: [
-          {
-            productId,
-            quantity: Number(quantity),
-            unitPrice: Number(purchasePrice || product?.costPrice || 0),
-          },
-        ],
+        quantity,
+        purchasePrice: Number(purchasePrice),
+        salePrice: Number(salePrice),
+        shippingCost: Number(shippingCost || 0),
+        paymentMethod,
+        supplierPaymentMethod: supplierPaymentMethod || undefined,
+        estimatedDate: estimatedDateTime,
+        notes,
       });
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === specialOrder.id
-            ? {
-                ...order,
-                status: 'ORDEN_GENERADA',
-                purchaseOrder: {
-                  id: purchaseOrder.id,
-                  orderNumber: purchaseOrder.orderNumber,
-                  status: purchaseOrder.status,
-                },
-              }
-            : order
-        )
-      );
-      setPoRefreshKey((key) => key + 1);
+
       const followUp = estimatedDate ? new Date(estimatedDate) : new Date();
       const beforeArrival = new Date(followUp);
       beforeArrival.setDate(beforeArrival.getDate() - 2);
@@ -277,40 +268,41 @@ export default function SpecialOrdersPage() {
           ? client.companyName || 'Sin nombre'
           : `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Sin nombre'
         : 'Cliente sin identificar';
+
       await activitiesApi.createActivity({
         clientId,
         type: 'SEGUIMIENTO',
-        title: `Seguimiento pedido especial ${specialOrder.orderNumber}`,
+        title: `Seguimiento pedido especial ${createdOrder.orderNumber}`,
         description: `Revisar llegada de ${product?.name || 'producto'} desde ${supplier?.name || 'proveedor'} y coordinar notificación a ${clientLabel}.`,
         scheduledFor: beforeArrival.toISOString(),
       });
+
       await activitiesApi.createActivity({
         clientId,
         type: 'TAREA',
-        title: `Entregar pedido ${specialOrder.orderNumber}`,
+        title: `Entregar pedido ${createdOrder.orderNumber}`,
         description: `Confirmar recepción y entrega de ${product?.name || 'producto'} a ${clientLabel}.`,
         scheduledFor: followUp.toISOString(),
       });
+
       await calendarEventsApi.create({
-        title: `Entrega pedido ${specialOrder.orderNumber}`,
+        title: `Entrega pedido ${createdOrder.orderNumber}`,
         category: 'TAREA',
         startDate: followUp.toISOString(),
         allDay: true,
         clientId,
       });
-      loadOrders();
+
+      await loadOrders();
       setIsSchedulingOpen(false);
       resetScheduleForm();
-      setActiveTab('compras');
     } catch (error) {
       console.error('Error creando pedido especial programado:', error);
       const axiosError = error as { response?: { data?: { message?: string; errors?: { message?: string }[] }; status?: number } };
-      let message = 'No se pudo programar el pedido especial, revisa los campos e intenta de nuevo.';
+      let message = 'No se pudo crear el pedido especial, revisa los campos e intenta nuevamente.';
       if (axiosError.response?.data) {
-        console.error('Detalle del error:', axiosError.response.data);
         const validationErrors = axiosError.response.data.errors;
         if (Array.isArray(validationErrors) && validationErrors.length > 0) {
-          console.error('Validation errors:', validationErrors);
           message = validationErrors.map((e) => e.message).filter(Boolean).join(' · ') || message;
         } else {
           message = axiosError.response.data.message || message;
@@ -337,16 +329,12 @@ export default function SpecialOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 font-display">
-            {activeTab === 'pedidos' ? 'Pedidos Especiales' : 'Órdenes de Compra'}
-          </h1>
-          {activeTab === 'pedidos' && (
-            <p className="text-gray-600 mt-1">
-              {totalItems} pedido{totalItems !== 1 ? 's' : ''} registrado{totalItems !== 1 ? 's' : ''}
-            </p>
-          )}
+          <h1 className="text-3xl font-semibold text-gray-900 font-display">Pedidos Especiales</h1>
+          <p className="text-gray-600 mt-1">
+            {totalItems} pedido{totalItems !== 1 ? 's' : ''} registrado{totalItems !== 1 ? 's' : ''}
+          </p>
         </div>
-        {activeTab === 'pedidos' && canEdit && (
+        {canEdit && (
           <Button onClick={() => setIsSchedulingOpen(true)}>
             <Plus className="w-4 h-4 mr-1" />
             Programar pedido especial
@@ -354,31 +342,6 @@ export default function SpecialOrdersPage() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-xl w-fit">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === 'compras' ? (
-        <PurchaseOrdersTab refreshKey={poRefreshKey} />
-      ) : (
-        <>
       {/* Filtros */}
       <Card className="mb-6">
         <div className="flex flex-col md:flex-row gap-4">
@@ -395,12 +358,17 @@ export default function SpecialOrdersPage() {
           <div className="w-full md:w-48">
             <select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
             >
               <option value="">Todos los estados</option>
               {ALL_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
               ))}
             </select>
           </div>
@@ -419,7 +387,7 @@ export default function SpecialOrdersPage() {
             <Plus className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-600">No se encontraron pedidos especiales</p>
             <p className="text-sm text-gray-500 mt-1">
-              Los pedidos especiales se crean desde la página de Productos cuando el stock es 0
+              Registra un pedido especial para iniciar la gestión con el proveedor
             </p>
           </div>
         ) : (
@@ -603,6 +571,20 @@ export default function SpecialOrdersPage() {
               onChange={(e) => handleScheduleChange('shippingCost', Number(e.target.value))}
             />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Select
+              label="Método de pago del cliente"
+              value={scheduleForm.paymentMethod}
+              onChange={(e) => handleScheduleChange('paymentMethod', e.target.value as PaymentMethod)}
+              options={PAYMENT_METHOD_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+            />
+            <Input
+              label="Condiciones de pago al proveedor"
+              value={scheduleForm.supplierPaymentMethod}
+              onChange={(e) => handleScheduleChange('supplierPaymentMethod', e.target.value)}
+              placeholder="Ej: 50% adelantado, 50% contra entrega"
+            />
+          </div>
           <Input
             label="Fecha estimada de llegada"
             type="date"
@@ -694,6 +676,25 @@ export default function SpecialOrdersPage() {
                   {selectedOrder.quantity} {selectedOrder.product.unit} · SKU: {selectedOrder.product.sku}
                 </p>
               </div>
+              <div>
+                <p className="text-gray-500">Proveedor</p>
+                <p className="font-semibold">{selectedOrder.supplier?.name ?? '—'}</p>
+                {selectedOrder.supplier?.phone && (
+                  <p className="text-gray-400">{selectedOrder.supplier.phone}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-gray-500">Importes</p>
+                <p className="font-semibold">
+                  Compra: ${selectedOrder.purchasePrice.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Venta: ${selectedOrder.salePrice.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                </p>
+                {selectedOrder.shippingCost > 0 && (
+                  <p className="text-xs text-gray-400">Envío: ${selectedOrder.shippingCost.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                )}
+              </div>
               {selectedOrder.estimatedDate && (
                 <div>
                   <p className="text-gray-500">Fecha estimada</p>
@@ -707,6 +708,9 @@ export default function SpecialOrdersPage() {
                   <p className="text-gray-500">Orden de Compra</p>
                   <p className="font-mono font-semibold">{selectedOrder.purchaseOrder.orderNumber}</p>
                   <p className="text-gray-400 text-xs">{selectedOrder.purchaseOrder.status}</p>
+                  <p className="text-gray-400 text-xs">
+                    Total: ${selectedOrder.purchaseOrder.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
               )}
               {selectedOrder.notifiedAt && (
@@ -714,6 +718,27 @@ export default function SpecialOrdersPage() {
                   <p className="text-gray-500">Cliente notificado</p>
                   <p className="font-semibold text-green-600">
                     {new Date(selectedOrder.notifiedAt).toLocaleDateString('es-VE')}
+                  </p>
+                </div>
+              )}
+              {selectedOrder.paymentMethod && (
+                <div>
+                  <p className="text-gray-500">Método de pago cliente</p>
+                  <p className="font-semibold">{formatPaymentMethodLabel(selectedOrder.paymentMethod)}</p>
+                  {selectedOrder.supplierPaymentMethod && (
+                    <p className="text-xs text-gray-400">Proveedor: {selectedOrder.supplierPaymentMethod}</p>
+                  )}
+                </div>
+              )}
+              {selectedOrder.sale && (
+                <div className="col-span-2 bg-primary-50/60 border border-primary-100 rounded-xl p-3">
+                  <p className="text-sm font-semibold text-primary-700">Factura generada</p>
+                  <p className="text-xs text-primary-700/80">
+                    {selectedOrder.sale.saleNumber} · ${selectedOrder.sale.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-primary-600/80">
+                    Registrada el {new Date(selectedOrder.sale.createdAt).toLocaleDateString('es-VE')} ·{' '}
+                    {formatPaymentMethodLabel(selectedOrder.sale.paymentMethod)}
                   </p>
                 </div>
               )}
@@ -748,8 +773,6 @@ export default function SpecialOrdersPage() {
           </div>
         )}
       </Modal>
-        </>
-      )}
     </div>
   );
 }

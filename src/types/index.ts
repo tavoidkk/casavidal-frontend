@@ -188,6 +188,12 @@ export interface SpecialOrder {
     companyName?: string;
     phone: string;
   };
+  supplierId: string;
+  supplier: {
+    id: string;
+    name: string;
+    phone?: string;
+  };
   productId: string;
   product: {
     id: string;
@@ -196,6 +202,9 @@ export interface SpecialOrder {
     unit?: string;
   };
   quantity: number;
+  purchasePrice: number;
+  salePrice: number;
+  shippingCost: number;
   status: OrderStatus;
   estimatedDate?: string;
   receivedDate?: string;
@@ -204,6 +213,17 @@ export interface SpecialOrder {
     id: string;
     orderNumber: string;
     status: string;
+    shippingCost?: number;
+    total: number;
+  };
+  paymentMethod?: PaymentMethod;
+  supplierPaymentMethod?: string;
+  sale?: {
+    id: string;
+    saleNumber: string;
+    total: number;
+    paymentMethod?: PaymentMethod;
+    createdAt: string;
   };
   notes?: string;
   createdAt: string;
@@ -233,6 +253,8 @@ export interface PurchaseOrder {
   subtotal: number;
   tax: number;
   total: number;
+  shippingCost: number;
+  paymentTerms?: string;
   orderDate: string;
   expectedDate?: string;
   receivedDate?: string;

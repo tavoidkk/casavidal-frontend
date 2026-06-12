@@ -3,8 +3,14 @@ import type { SpecialOrder, ApiResponse, PaginatedResponse } from '../types';
 
 export interface CreateSpecialOrderInput {
   clientId: string;
+  supplierId: string;
   productId: string;
   quantity: number;
+  purchasePrice: number;
+  salePrice: number;
+  shippingCost?: number;
+  paymentMethod: 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE';
+  supplierPaymentMethod?: string;
   estimatedDate?: string;
   notes?: string;
 }
