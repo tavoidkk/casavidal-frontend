@@ -100,6 +100,7 @@ export default function SalesPage() {
         freight: currentSale.freight,
         currency: currentSale.currency,
         paymentReference: currentSale.paymentReference || undefined,
+        pointsRedeemed: currentSale.pointsRedeemed > 0 ? currentSale.pointsRedeemed : undefined,
       };
 
       const createdSale = await salesApi.create(saleData);

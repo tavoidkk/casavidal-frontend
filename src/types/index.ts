@@ -349,6 +349,18 @@ export interface Suggestion {
   ruleKey: string;
 }
 
+// Points
+export interface PointsTransaction {
+  id: string;
+  clientId: string;
+  type: 'EARNED' | 'REDEEMED';
+  points: number;
+  runningBalance: number;
+  description?: string;
+  saleId?: string;
+  createdAt: string;
+}
+
 // Activity
 export type ActivityType = 'LLAMADA' | 'EMAIL' | 'REUNION' | 'NOTA' | 'TAREA' | 'SEGUIMIENTO';
 

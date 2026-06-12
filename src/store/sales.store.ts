@@ -18,6 +18,7 @@ export interface SaleCustomer {
   document?: string;
   companyName?: string;
   clientType?: 'NATURAL' | 'JURIDICO';
+  loyaltyPoints?: number;
 }
 
 export interface DraftSale {
@@ -28,6 +29,8 @@ export interface DraftSale {
   freight: number;
   discount: number;
   discountType: 'PERCENTAGE' | 'FIXED';
+  pointsRedeemed: number;
+  pointsDiscount: number;
   taxRate: number;
   taxAmount: number;
   total: number;
@@ -55,6 +58,7 @@ interface SalesState {
   updateSaleItemQuantity: (productId: string, quantity: number) => void;
   setSaleFreight: (value: number) => void;
   setSaleDiscount: (value: number, type: 'PERCENTAGE' | 'FIXED') => void;
+  setPointsRedeemed: (points: number, discount: number) => void;
   setSaleTaxRate: (value: number) => void;
   setSalePaymentMethod: (method: string) => void;
   setSaleCurrency: (currency: 'USD' | 'BS') => void;
@@ -84,6 +88,8 @@ const createEmptySale = (): DraftSale => ({
   freight: 0,
   discount: 0,
   discountType: 'PERCENTAGE',
+  pointsRedeemed: 0,
+  pointsDiscount: 0,
   taxRate: 0.16,
   taxAmount: 0,
   total: 0,
@@ -211,6 +217,21 @@ export const useSalesStore = create<SalesState>()(
         get().calculateSaleTotal();
       },
 
+      setPointsRedeemed: (points) => {
+        set((state) => {
+          if (!state.currentSale) return state;
+          return {
+            currentSale: {
+              ...state.currentSale,
+              pointsRedeemed: points,
+              pointsDiscount: points * 0.10,
+            },
+            isDirty: true,
+          };
+        });
+        get().calculateSaleTotal();
+      },
+
       setSaleTaxRate: (value) => {
         set((state) => {
           if (!state.currentSale) return state;
@@ -266,7 +287,7 @@ export const useSalesStore = create<SalesState>()(
         set((state) => {
           if (!state.currentSale) return state;
 
-          const { items, freight, discount, discountType, taxRate } = state.currentSale;
+          const { items, freight, discount, discountType, taxRate, pointsDiscount } = state.currentSale;
           const itemsSubtotal = items.reduce((acc, item) => acc + item.subtotal, 0);
           const subtotalWithFreight = itemsSubtotal + freight;
 
@@ -277,7 +298,7 @@ export const useSalesStore = create<SalesState>()(
             discountAmount = discount;
           }
 
-          const subtotalAfterDiscount = subtotalWithFreight - discountAmount;
+          const subtotalAfterDiscount = subtotalWithFreight - discountAmount - pointsDiscount;
           const taxAmount = subtotalAfterDiscount * taxRate;
           const total = subtotalAfterDiscount + taxAmount;
 

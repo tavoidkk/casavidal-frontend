@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
-import { Users, Package, TrendingUp, AlertCircle, ShoppingCart, Clock, ListTodo, Sparkles } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Check, X, Sparkles as SparklesIcon, Lightbulb, CheckCircle2, User, ArrowUpRight, Clock as ClockIcon, TrendingUp, Users, Package, AlertCircle, ShoppingCart, ListTodo } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,7 +15,7 @@ import {
 } from 'recharts';
 import { dashboardApi, type PendingActivities } from '../api/dashboard.api';
 import { suggestionsApi } from '../api/suggestions.api';
-import type { DashboardStats, SalesTrendItem, TopProduct, TopClient } from '../types';
+import type { DashboardStats, SalesTrendItem, TopProduct, TopClient, Suggestion } from '../types';
 import { staggerContainer, staggerItem } from '../utils/motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,6 +29,9 @@ export default function DashboardPage() {
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [pendingActivities, setPendingActivities] = useState<PendingActivities | null>(null);
   const [suggestionCount, setSuggestionCount] = useState(0);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingTrend, setLoadingTrend] = useState(true);
   const [loadingTopProducts, setLoadingTopProducts] = useState(true);
@@ -147,12 +151,26 @@ export default function DashboardPage() {
       }
     };
 
+    const loadSuggestionsData = async () => {
+      try {
+        const data = await cachedFetch('dashboard:suggestions', () => suggestionsApi.getSuggestions());
+        if (isActive) {
+          setSuggestions(data);
+        }
+      } catch {
+        if (isActive) {
+          setSuggestions([]);
+        }
+      }
+    };
+
     loadStats();
     loadTrend();
     loadTopProducts();
     loadTopClients();
     loadPendingActivities();
     loadSuggestionsCount();
+    loadSuggestionsData();
 
     return () => {
       isActive = false;
@@ -160,6 +178,61 @@ export default function DashboardPage() {
   }, []);
 
   const isSuggestionsLoading = loadingSuggestions && suggestionCount === 0;
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleApplySuggestion = async (s: Suggestion) => {
+    setApplyingId(s.id);
+    try {
+      await suggestionsApi.applySuggestion(s.id);
+      setSuggestions(prev => prev.filter(x => x.id !== s.id));
+      setSuggestionCount(prev => Math.max(0, prev - 1));
+      showToast('success', 'Sugerencia aplicada: actividad creada.');
+    } catch {
+      showToast('error', 'Error al aplicar sugerencia.');
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
+  const handleDismissSuggestion = async (s: Suggestion) => {
+    try {
+      await suggestionsApi.dismissSuggestion(s.id);
+      setSuggestions(prev => prev.filter(x => x.id !== s.id));
+      setSuggestionCount(prev => Math.max(0, prev - 1));
+      showToast('success', 'Sugerencia descartada.');
+    } catch {
+      showToast('error', 'Error al descartar sugerencia.');
+    }
+  };
+
+  const suggestionIcons: Record<string, typeof Lightbulb> = {
+    LLAMADA: CheckCircle2,
+    EMAIL: CheckCircle2,
+    REUNION: User,
+    SEGUIMIENTO: ArrowUpRight,
+    TAREA: ClockIcon,
+  };
+
+  const priorityColors: Record<number, string> = {
+    95: 'bg-red-100 text-red-700 border-red-200',
+    90: 'bg-red-100 text-red-700 border-red-200',
+    85: 'bg-orange-100 text-orange-700 border-orange-200',
+    80: 'bg-orange-100 text-orange-700 border-orange-200',
+    75: 'bg-amber-100 text-amber-700 border-amber-200',
+    70: 'bg-amber-100 text-amber-700 border-amber-200',
+    60: 'bg-blue-100 text-blue-700 border-blue-200',
+  };
+
+  const priorityLabel = (p: number) => {
+    if (p >= 90) return 'Crítica';
+    if (p >= 75) return 'Alta';
+    if (p >= 60) return 'Media';
+    return 'Baja';
+  };
 
   const statCards = [
       {
@@ -203,9 +276,9 @@ export default function DashboardPage() {
       onClick: () => navigate('/special-orders'),
     },
     {
-      icon: Sparkles,
+      icon: SparklesIcon,
       label: 'Sugerencias CRM',
-       value: isSuggestionsLoading ? '…' : String(suggestionCount),
+       value: isSuggestionsLoading ? '…' : String(suggestions.length),
        sub: isSuggestionsLoading ? 'Cargando sugerencias…' : 'acciones recomendadas',
       color: 'bg-purple-500',
       onClick: () => navigate('/crm'),
@@ -226,6 +299,12 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-1">Resumen general de tu operacion</p>
         </div>
       </div>
+
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -301,6 +380,63 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         )}
       </Card>
+
+      {/* Sugerencias CRM */}
+      {suggestions.length > 0 && (
+        <Card className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 font-display flex items-center gap-2">
+              <SparklesIcon className="w-5 h-5 text-purple-500" /> Sugerencias CRM
+            </h2>
+            <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">
+              {suggestions.length} pendientes
+            </span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {suggestions.map((s) => {
+              const Icon = suggestionIcons[s.type] || Lightbulb;
+              const priorityKey = [95, 90, 85, 80, 75, 70, 60].find((k) => s.priority >= k) || 60;
+              const priorityClass = priorityColors[priorityKey];
+
+              return (
+                <Card key={s.id} className="border border-gray-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{s.title}</p>
+                        <p className="text-sm text-gray-500 mt-1">{s.clientName}</p>
+                      </div>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${priorityClass}`}>
+                      {priorityLabel(s.priority)}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-600 mt-3">{s.description}</p>
+                  <p className="text-xs text-gray-500 mt-2">{s.reason}</p>
+
+                  <div className="flex items-center justify-end gap-2 mt-4">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      isLoading={applyingId === s.id}
+                      onClick={() => handleApplySuggestion(s)}
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Completar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDismissSuggestion(s)}>
+                      <X className="w-4 h-4 mr-1" /> Descartar
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Top productos y clientes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

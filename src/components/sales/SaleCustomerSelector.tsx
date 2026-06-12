@@ -65,6 +65,7 @@ export function SaleCustomerSelector({
       email: client.email,
       document: client.document,
       clientType: client.clientType || 'NATURAL',
+      loyaltyPoints: client.loyaltyPoints,
     });
     setSearch('');
   };
@@ -91,6 +92,7 @@ export function SaleCustomerSelector({
           email: created.email,
           document: created.document,
           clientType: created.clientType || (formData.clientType as 'NATURAL' | 'JURIDICO'),
+          loyaltyPoints: 0,
         });
 
         setClients((prev) => [created, ...prev]);

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, Mail, Phone, MapPin, Star, ShoppingBag, AlertTriangle, Calendar, TrendingDown } from 'lucide-react';
+import { Plus, Mail, Phone, MapPin, Star, ShoppingBag, AlertTriangle, Calendar, TrendingDown, Award, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { ActivityTimeline } from './ActivityTimeline';
 import { ActivityForm } from './ActivityForm';
 import { activitiesApi } from '../../api/activities.api';
-import type { Client, Activity, ActivityCreate } from '../../types';
+import { clientsApi } from '../../api/Clients.api';
+import type { Client, Activity, ActivityCreate, PointsTransaction } from '../../types';
 
 interface ClientDetailModalProps {
   isOpen: boolean;
@@ -19,12 +20,27 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
 
   useEffect(() => {
     if (isOpen && client.id) {
       loadActivities();
+      loadPointsHistory();
     }
   }, [isOpen, client.id]);
+
+  const loadPointsHistory = async () => {
+    setLoadingPoints(true);
+    try {
+      const data = await clientsApi.getPointsHistory(client.id);
+      setPointsHistory(data);
+    } catch (error) {
+      console.error('Error loading points history:', error);
+    } finally {
+      setLoadingPoints(false);
+    }
+  };
 
   const loadActivities = async () => {
     setLoadingActivities(true);
@@ -151,6 +167,46 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
                 <span className="text-sm text-gray-600">Etapa actual</span>
                 <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>{client.stage}</Badge>
               </div>
+            </div>
+
+            {/* Timeline de Puntos de Lealtad */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <Award className="w-4 h-4 text-amber-500" /> Puntos de Lealtad
+              </h4>
+              {loadingPoints ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-10 bg-gray-200 rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : pointsHistory.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-2">Sin historial de puntos</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                  {pointsHistory.map((pt) => (
+                    <div key={pt.id} className="flex items-center justify-between text-sm bg-white rounded-lg px-3 py-2 border border-gray-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {pt.type === 'EARNED' ? (
+                          <ArrowUpCircle className="w-4 h-4 text-green-500 shrink-0" />
+                        ) : (
+                          <ArrowDownCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <p className="text-xs text-gray-700 truncate">{pt.description || (pt.type === 'EARNED' ? 'Compra' : 'Canje')}</p>
+                          <p className="text-[10px] text-gray-400">{new Date(pt.createdAt).toLocaleDateString('es-VE')}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className={`text-xs font-semibold ${pt.type === 'EARNED' ? 'text-green-600' : 'text-red-600'}`}>
+                          {pt.type === 'EARNED' ? '+' : '-'}{pt.points}
+                        </p>
+                        <p className="text-[10px] text-gray-400">{pt.runningBalance} pts</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

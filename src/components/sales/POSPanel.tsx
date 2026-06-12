@@ -37,6 +37,7 @@ export function POSPanel({
     setSaleCurrency,
     setPaymentReference,
     setSaleNotes,
+    setPointsRedeemed,
   } = useSalesStore();
 
   const canHoldOrSave = useMemo(() => {
@@ -136,6 +137,7 @@ export function POSPanel({
               }
             }}
             onNotesChange={setSaleNotes}
+            onPointsRedeemedChange={setPointsRedeemed}
           />
         </div>
 

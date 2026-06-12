@@ -1,5 +1,5 @@
 import { api } from '../lib/axios';
-import type { Client, ApiResponse, PaginatedResponse } from '../types';
+import type { Client, PointsTransaction, ApiResponse, PaginatedResponse } from '../types';
 
 interface ClientFilters {
   search?: string;
@@ -85,6 +85,18 @@ export const clientsApi = {
   // Clientes VIP
   getVIP: async () => {
     const { data } = await api.get<ApiResponse<Client[]>>('/clients/vip');
+    return data.data;
+  },
+
+  // Historial de puntos
+  getPointsHistory: async (id: string) => {
+    const { data } = await api.get<ApiResponse<PointsTransaction[]>>(`/clients/${id}/points-history`);
+    return data.data;
+  },
+
+  // Canjear puntos
+  redeemPoints: async (id: string, body: { points: number; saleId?: string }) => {
+    const { data } = await api.post<ApiResponse<any>>(`/clients/${id}/redeem-points`, body);
     return data.data;
   },
 };

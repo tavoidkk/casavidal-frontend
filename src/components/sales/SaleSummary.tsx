@@ -1,4 +1,5 @@
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 import { useCurrencyStore } from '../../store/currency.store';
 import { formatBs } from '../../utils/currency';
 import type { DraftSale } from '../../store/sales.store';
@@ -9,6 +10,7 @@ interface SaleSummaryProps {
   onDiscountChange: (value: number, type: 'PERCENTAGE' | 'FIXED') => void;
   onPaymentMethodChange: (method: string) => void;
   onNotesChange: (notes: string) => void;
+  onPointsRedeemedChange?: (points: number) => void;
 }
 
 const PAYMENT_METHODS = [
@@ -25,9 +27,13 @@ export function SaleSummary({
   onDiscountChange,
   onPaymentMethodChange,
   onNotesChange,
+  onPointsRedeemedChange,
 }: SaleSummaryProps) {
   const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
   const isBs = sale.currency === 'BS';
+  const availablePoints = sale.customer?.loyaltyPoints || 0;
+  const maxPointsForSale = Math.floor((sale.subtotal + sale.freight) * 0.15 / 0.10);
+  const maxRedeemable = Math.min(availablePoints, maxPointsForSale);
 
   const formatTotal = (amount: number) =>
     amount.toLocaleString('es-VE', { minimumFractionDigits: 2 });
@@ -93,6 +99,50 @@ export function SaleSummary({
         />
       </Card>
 
+      {/* Puntos de Lealtad */}
+      {sale.customer && availablePoints > 0 && (
+        <Card className="p-4 border-amber-200">
+          <label className="block text-sm font-semibold text-amber-700 mb-2 flex items-center gap-1">
+            <span>🎖️</span> Puntos de Lealtad
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Disponibles: <strong>{availablePoints} pts</strong> (máx. {maxRedeemable} pts = ${formatTotal(maxRedeemable * 0.10)})
+          </p>
+          {maxRedeemable > 0 ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max={maxRedeemable}
+                step="1"
+                value={sale.pointsRedeemed}
+                onChange={(e) => {
+                  const p = Math.min(maxRedeemable, Math.max(0, parseInt(e.target.value) || 0));
+                  onPointsRedeemedChange?.(p);
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-400 text-sm"
+                placeholder="0 pts"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onPointsRedeemedChange?.(0)}
+                disabled={sale.pointsRedeemed === 0}
+              >
+                ✕
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">El subtotal debe ser mayor para canjear puntos (mín. 15% del subtotal como descuento)</p>
+          )}
+          {sale.pointsRedeemed > 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              Descuento por puntos: -${formatTotal(sale.pointsDiscount)}
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Notas */}
       <Card className="p-4">
         <label className="block text-sm font-semibold text-gray-700 mb-2">Notas</label>
@@ -131,6 +181,13 @@ export function SaleSummary({
             </div>
           )}
 
+          {sale.pointsRedeemed > 0 && (
+            <div className="flex justify-between text-amber-700 font-medium">
+              <span>🎖️ Descuento puntos ({sale.pointsRedeemed} pts)</span>
+              <span>-${formatTotal(sale.pointsDiscount)}</span>
+            </div>
+          )}
+
           <div className="border-t border-gray-200 pt-2 flex justify-between text-gray-700">
             <span>Subtotal (después descuento)</span>
             <span>
@@ -139,7 +196,7 @@ export function SaleSummary({
                   sale.discountType === 'PERCENTAGE'
                     ? ((sale.subtotal + sale.freight) * sale.discount) / 100
                     : sale.discount
-                )
+                ) - sale.pointsDiscount
               )}
             </span>
           </div>

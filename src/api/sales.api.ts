@@ -15,6 +15,7 @@ export interface CreateSaleInput {
   freight?: number;
   currency?: 'USD' | 'BS';
   paymentReference?: string;
+  pointsRedeemed?: number;
 }
 
 export interface SaleFilters {
