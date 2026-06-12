@@ -1,4 +1,6 @@
 import { Card } from '../ui/Card';
+import { useCurrencyStore } from '../../store/currency.store';
+import { formatBs } from '../../utils/currency';
 import type { DraftSale } from '../../store/sales.store';
 
 interface SaleSummaryProps {
@@ -24,6 +26,12 @@ export function SaleSummary({
   onPaymentMethodChange,
   onNotesChange,
 }: SaleSummaryProps) {
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
+  const isBs = sale.currency === 'BS';
+
+  const formatTotal = (amount: number) =>
+    amount.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+
   return (
     <div className="space-y-4">
       {/* Método de pago */}
@@ -102,49 +110,71 @@ export function SaleSummary({
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-gray-700">
             <span>Subtotal (Productos)</span>
-            <span>${Number(sale.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+            <span>${formatTotal(sale.subtotal)}</span>
           </div>
 
           {sale.freight > 0 && (
             <div className="flex justify-between text-gray-700">
               <span>Flete</span>
-              <span>+${Number(sale.freight).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+              <span>+${formatTotal(sale.freight)}</span>
             </div>
           )}
 
           {sale.discount > 0 && (
             <div className="flex justify-between text-green-700 font-medium">
               <span>Descuento ({sale.discountType === 'PERCENTAGE' ? `${sale.discount}%` : '$'})</span>
-              <span>-${Number(Math.abs(
+              <span>-${formatTotal(Math.abs(
                 sale.discountType === 'PERCENTAGE'
                   ? ((sale.subtotal + sale.freight) * sale.discount) / 100
                   : sale.discount
-              )).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+              ))}</span>
             </div>
           )}
 
           <div className="border-t border-gray-200 pt-2 flex justify-between text-gray-700">
             <span>Subtotal (después descuento)</span>
             <span>
-              ${Number(
+              ${formatTotal(
                 sale.subtotal + sale.freight - (
                   sale.discountType === 'PERCENTAGE'
                     ? ((sale.subtotal + sale.freight) * sale.discount) / 100
                     : sale.discount
                 )
-              ).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              )}
             </span>
           </div>
 
           <div className="flex justify-between text-gray-700">
             <span>IVA (16%)</span>
-            <span>+${Number(sale.taxAmount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+            <span>+${formatTotal(sale.taxAmount)}</span>
           </div>
 
-          <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base text-gray-900">
-            <span>TOTAL</span>
-            <span>${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
-          </div>
+          {/* Total PRINCIPAL según moneda */}
+          {isBs && usdToBsRate ? (
+            <>
+              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base text-primary-700">
+                <span>TOTAL Bs.</span>
+                <span>{formatBs(sale.total * usdToBsRate)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 border-t border-dashed border-gray-300 pt-1">
+                <span>Total USD (referencia)</span>
+                <span>${formatTotal(sale.total)}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base text-gray-900">
+                <span>TOTAL</span>
+                <span>${formatTotal(sale.total)}</span>
+              </div>
+              {usdToBsRate && (
+                <div className="flex justify-between font-semibold text-sm text-primary-700 border-t border-dashed border-gray-300 pt-2">
+                  <span>TOTAL Bs.</span>
+                  <span>{formatBs(sale.total * usdToBsRate)}</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </Card>
     </div>

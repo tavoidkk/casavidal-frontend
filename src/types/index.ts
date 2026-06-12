@@ -161,6 +161,9 @@ export interface Sale {
   tax: number;
   total: number;
   paymentMethod: PaymentMethod;
+  currency: 'USD' | 'BS';
+  paymentReference?: string | null;
+  usdToBsRateAtSale?: number | null;
   notes?: string;
   items: SaleItem[];
   createdAt: string;
@@ -417,7 +420,11 @@ export interface Settings {
   // Localización
   locale: string;
   timezone: string;
-  
+
+  // Tasa de cambio USD -> Bs
+  usdToBsRate?: number | null;
+  usdToBsUpdatedAt?: string | null;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -531,5 +538,8 @@ export interface UpdateSettingsInput {
   // Localización
   locale?: string;
   timezone?: string;
+
+  // Tasa de cambio USD -> Bs
+  usdToBsRate?: number | null;
 }
 

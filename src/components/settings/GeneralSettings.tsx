@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image } from 'lucide-react';
+import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 import type { Settings, Currency, UpdateSettingsInput } from '../../types';
 import { Card } from '../ui/Card';
@@ -42,6 +42,7 @@ export default function GeneralSettings() {
         enableAutoBackup: data.enableAutoBackup,
         locale: data.locale,
         timezone: data.timezone,
+        usdToBsRate: data.usdToBsRate ?? null,
       });
       if (data.companyLogo) {
         setLogoPreview(data.companyLogo);
@@ -75,6 +76,7 @@ export default function GeneralSettings() {
       form.enableAutoBackup !== settings.enableAutoBackup ||
       form.locale !== settings.locale ||
       form.timezone !== settings.timezone ||
+      form.usdToBsRate !== (settings.usdToBsRate ?? null) ||
       newLogo !== null ||
       removeLogo;
 
@@ -170,6 +172,7 @@ export default function GeneralSettings() {
         enableAutoBackup: reset.enableAutoBackup,
         locale: reset.locale,
         timezone: reset.timezone,
+        usdToBsRate: reset.usdToBsRate ?? null,
       });
       setLogoPreview(reset.companyLogo || null);
       setNewLogo(null);
@@ -363,6 +366,60 @@ export default function GeneralSettings() {
               placeholder="30"
             />
             <p className="text-xs text-gray-500 mt-1">Plazo por defecto para pagos</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Tasa de Cambio USD -> Bs */}
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <Calculator className="w-5 h-5 text-primary-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Tasa de Cambio USD → Bs</h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Esta tasa se usa para mostrar precios en bolívares junto a los precios en USD.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tasa del Día (Bs/USD)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="0"
+                step="0.0001"
+                value={form.usdToBsRate ?? ''}
+                onChange={(e) => handleInputChange('usdToBsRate', e.target.value ? parseFloat(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Ej: 40.50"
+              />
+              <button
+                type="button"
+                onClick={() => handleInputChange('usdToBsRate', null)}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-red-600 border border-gray-300 rounded-lg hover:bg-red-50"
+                title="Limpiar tasa"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Última Actualización</label>
+            <p className="px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
+              {settings?.usdToBsUpdatedAt
+                ? new Date(settings.usdToBsUpdatedAt).toLocaleDateString('es-VE', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })
+                : '—'}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vista Previa</label>
+            <p className="px-3 py-2 text-sm font-semibold text-primary-700 border border-primary-200 rounded-lg bg-primary-50">
+              {form.usdToBsRate
+                ? `1 USD = Bs. ${form.usdToBsRate.toLocaleString('es-VE', { minimumFractionDigits: 4 })}`
+                : 'Tasa no configurada'}
+            </p>
           </div>
         </div>
       </Card>

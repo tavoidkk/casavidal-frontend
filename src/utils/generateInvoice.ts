@@ -67,6 +67,9 @@ export function generateInvoicePDF(sale: Sale): void {
   doc.setFont('helvetica', 'normal');
   doc.text(`${sale.seller.firstName} ${sale.seller.lastName}`, pageW / 2 + 10, 51);
   doc.text(`Método de pago: ${PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}`, pageW / 2 + 10, 56);
+  if (sale.paymentReference) {
+    doc.text(`Referencia: ${sale.paymentReference}`, pageW / 2 + 10, 61);
+  }
 
   y += 10;
 
@@ -99,21 +102,32 @@ export function generateInvoicePDF(sale: Sale): void {
   doc.setDrawColor(200, 200, 200);
   doc.line(pageW - margin - 70, finalY, pageW - margin, finalY);
 
+  const isBs = sale.currency === 'BS';
+  const totalLabel = isBs ? 'TOTAL Bs.' : 'TOTAL';
+  const totalValue = isBs && sale.usdToBsRateAtSale
+    ? `Bs. ${(sale.total * sale.usdToBsRateAtSale).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+    : `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL:', pageW - margin - 70, finalY + 8);
-  doc.text(
-    `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-    pageW - margin,
-    finalY + 8,
-    { align: 'right' }
-  );
+  doc.text(totalLabel, pageW - margin - 70, finalY + 8);
+  doc.text(totalValue, pageW - margin, finalY + 8, { align: 'right' });
+
+  if (isBs && sale.usdToBsRateAtSale) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    const usdRef = `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })} (tasa ${sale.usdToBsRateAtSale})`;
+    doc.text(`USD ref: ${usdRef}`, pageW - margin, finalY + 15, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
 
   // Notas
+  const notesY = isBs && sale.usdToBsRateAtSale ? finalY + 22 : finalY + 14;
   if (sale.notes) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
-    doc.text(`Notas: ${sale.notes}`, margin, finalY + 16);
+    doc.text(`Notas: ${sale.notes}`, margin, notesY);
   }
 
   // ── Pie ──

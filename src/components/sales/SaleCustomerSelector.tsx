@@ -20,7 +20,7 @@ interface Client {
 interface SaleCustomerSelectorProps {
   onSelectCustomer: (customer: SaleCustomer | null) => void;
   selectedCustomer: SaleCustomer | null;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function SaleCustomerSelector({

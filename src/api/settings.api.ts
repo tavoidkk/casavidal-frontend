@@ -25,6 +25,15 @@ export const settingsApi = {
   },
 
   /**
+   * GET /api/settings/rate
+   * Obtener la tasa de cambio USD -> Bs (sin autenticación)
+   */
+  async getRate(): Promise<{ usdToBsRate: number | null; usdToBsUpdatedAt: string | null }> {
+    const response = await api.get<ApiResponse<{ usdToBsRate: number | null; usdToBsUpdatedAt: string | null }>>('/settings/rate');
+    return response.data.data;
+  },
+
+  /**
    * Actualizar configuración del sistema
    * Solo accesible por ADMIN
    */

@@ -32,6 +32,8 @@ export interface DraftSale {
   taxAmount: number;
   total: number;
   paymentMethod: string;
+  currency: 'USD' | 'BS';
+  paymentReference: string;
   notes: string;
   status: 'DRAFT' | 'HOLD';
   createdAt: string;
@@ -55,6 +57,8 @@ interface SalesState {
   setSaleDiscount: (value: number, type: 'PERCENTAGE' | 'FIXED') => void;
   setSaleTaxRate: (value: number) => void;
   setSalePaymentMethod: (method: string) => void;
+  setSaleCurrency: (currency: 'USD' | 'BS') => void;
+  setPaymentReference: (ref: string) => void;
   setSaleNotes: (notes: string) => void;
   calculateSaleTotal: () => void;
 
@@ -84,6 +88,8 @@ const createEmptySale = (): DraftSale => ({
   taxAmount: 0,
   total: 0,
   paymentMethod: 'EFECTIVO',
+  currency: 'USD',
+  paymentReference: '',
   notes: '',
   status: 'DRAFT',
   createdAt: new Date().toISOString(),
@@ -221,6 +227,26 @@ export const useSalesStore = create<SalesState>()(
           if (!state.currentSale) return state;
           return {
             currentSale: { ...state.currentSale, paymentMethod: method },
+            isDirty: true,
+          };
+        });
+      },
+
+      setSaleCurrency: (currency) => {
+        set((state) => {
+          if (!state.currentSale) return state;
+          return {
+            currentSale: { ...state.currentSale, currency },
+            isDirty: true,
+          };
+        });
+      },
+
+      setPaymentReference: (ref) => {
+        set((state) => {
+          if (!state.currentSale) return state;
+          return {
+            currentSale: { ...state.currentSale, paymentReference: ref },
             isDirty: true,
           };
         });

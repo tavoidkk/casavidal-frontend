@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { pageTransition } from './utils/motion';
 import PageLoader from './components/ui/PageLoader';
 import { useAuthStore } from '../src/store/auth.store';
+import { useCurrencyStore } from '../src/store/currency.store';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -60,11 +61,13 @@ const AsyncPage = ({ Component }: { Component: PageRoute['Component'] }) => (
 
 function App() {
   const initAuth = useAuthStore((state) => state.initAuth);
+  const loadRate = useCurrencyStore((s) => s.loadRate);
   const location = useLocation();
 
   useEffect(() => {
     initAuth(); // Cargar auth del localStorage al iniciar
-  }, [initAuth]);
+    loadRate(); // Cargar tasa de cambio USD -> Bs
+  }, [initAuth, loadRate]);
 
   return (
     <AnimatePresence mode="wait" initial={false}>

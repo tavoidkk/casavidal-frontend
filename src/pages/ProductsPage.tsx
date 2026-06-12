@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit, Trash2, Package, AlertTriangle } from 'lucide-react';
 import { productsApi } from '../api/products.api';
+import { useCurrencyStore } from '../store/currency.store';
+import { formatBs } from '../utils/currency';
 import type { Category, AdjustStockData, CreateProductData } from '../api/products.api';
 import type { ProductFormData } from '../components/products/ProductForm';
 import type { Product } from '../types';
@@ -18,6 +20,8 @@ import { buildCacheKey, cachedFetch } from '../lib/requestCache';
 export default function ProductsPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
+  const loadRate = useCurrencyStore((s) => s.loadRate);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -77,6 +81,10 @@ export default function ProductsPage() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    loadRate();
+  }, [loadRate]);
 
   const handleSubmit = async (data: ProductFormData) => {
     setIsSubmitting(true);
@@ -226,12 +234,13 @@ export default function ProductsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Producto</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Precio</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Estado</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Acciones</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Producto</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Precio $</th>
+                    {usdToBsRate && <th className="text-left py-3 px-4 font-semibold text-gray-700">Bs.</th>}
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Estado</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Acciones</th>
                     </tr>
                   </thead>
                   <motion.tbody variants={staggerContainer} initial="hidden" animate="visible">
@@ -265,6 +274,13 @@ export default function ProductsPage() {
                             </p>
                           </div>
                         </td>
+                        {usdToBsRate && (
+                          <td className="py-3 px-4">
+                            <span className="text-sm font-medium text-primary-700">
+                              {formatBs(product.salePrice * usdToBsRate)}
+                            </span>
+                          </td>
+                        )}
                         <td className="py-3 px-4">
                           <div className="text-sm">
                             <p className="font-medium text-gray-900">

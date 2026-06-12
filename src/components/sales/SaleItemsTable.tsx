@@ -1,5 +1,7 @@
 import { Trash2, Minus, Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useCurrencyStore } from '../../store/currency.store';
+import { formatBs } from '../../utils/currency';
 import type { SaleItem } from '../../store/sales.store';
 
 interface SaleItemsTableProps {
@@ -9,6 +11,8 @@ interface SaleItemsTableProps {
 }
 
 export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleItemsTableProps) {
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
+
   if (items.length === 0) {
     return (
       <div className="p-8 text-center border border-dashed border-gray-200 rounded-xl">
@@ -20,19 +24,20 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-        <div className="col-span-5 py-2.5 px-3 font-semibold text-gray-700">Producto</div>
-        <div className="col-span-3 py-2.5 px-3 font-semibold text-gray-700">Cantidad</div>
+        <div className="col-span-4 py-2.5 px-3 font-semibold text-gray-700">Producto</div>
+        <div className="col-span-2 py-2.5 px-3 font-semibold text-gray-700">Cantidad</div>
         <div className="col-span-2 py-2.5 px-3 font-semibold text-gray-700 text-right">P. Unit.</div>
+        <div className="col-span-2 py-2.5 px-3 font-semibold text-gray-700 text-right">Bs.</div>
         <div className="col-span-2 py-2.5 px-3 font-semibold text-gray-700 text-right">Subtotal</div>
       </div>
       <div className="divide-y divide-gray-100">
         {items.map((item) => (
           <div key={item.productId} className="grid grid-cols-12 items-center hover:bg-gray-50">
-            <div className="col-span-5 py-3 px-3">
+            <div className="col-span-4 py-3 px-3">
               <p className="font-medium text-gray-900 text-sm">{item.productName}</p>
               <p className="text-xs text-gray-500">{item.category}</p>
             </div>
-            <div className="col-span-3 py-3 px-3">
+            <div className="col-span-2 py-3 px-3">
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
@@ -59,6 +64,9 @@ export function SaleItemsTable({ items, onUpdateQuantity, onRemoveItem }: SaleIt
             </div>
             <div className="col-span-2 py-3 px-3 text-right text-sm">
               ${Number(item.unitPrice).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+            </div>
+            <div className="col-span-2 py-3 px-3 text-right text-sm text-gray-500">
+              {usdToBsRate ? formatBs(item.unitPrice * usdToBsRate) : '—'}
             </div>
             <div className="col-span-2 py-3 px-3 text-right">
               <div className="flex items-center justify-end gap-2">

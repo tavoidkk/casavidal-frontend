@@ -5,12 +5,14 @@ import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { BarcodeScanner } from '../common/BarcodeScanner';
 import { productsApi } from '../../api/products.api';
+import { useCurrencyStore } from '../../store/currency.store';
+import { formatBs } from '../../utils/currency';
 import type { Category } from '../../api/products.api';
 import type { Product } from '../../types';
 
 interface SaleProductSearchProps {
   onSelectProduct: (product: any, quantity: number) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProductSearchProps) {
@@ -29,6 +31,7 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
     costPrice: '',
     currentStock: '0',
   });
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
 
   const loadProducts = useCallback(async (query = '') => {
     try {
@@ -134,6 +137,16 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
               <div className="flex justify-between items-start mb-1">
                 <p className="font-medium text-gray-900 text-sm">{product.name}</p>
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">{product.category?.name}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold text-primary-700">
+                  ${Number(product.salePrice).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                </span>
+                {usdToBsRate && (
+                  <span className="text-xs text-gray-500">
+                    {formatBs(product.salePrice * usdToBsRate)}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 mb-2">Stock: {product.currentStock}</p>
               <div className="flex gap-2 items-center">

@@ -69,6 +69,8 @@ export default function QuotationsPage() {
       discount: quotation.discountAmount,
       total: quotation.total,
       paymentMethod: 'EFECTIVO',
+      currency: 'USD',
+      notes: undefined,
       createdAt: quotation.createdAt,
     };
 

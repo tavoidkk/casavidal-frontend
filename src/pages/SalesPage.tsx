@@ -8,6 +8,8 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useAuthStore } from '../store/auth.store';
 import { useSalesStore } from '../store/sales.store';
+import { useCurrencyStore } from '../store/currency.store';
+import { formatBs } from '../utils/currency';
 import { SaleForm } from '../components/sales/SaleForm';
 import { DraftSalesList } from '../components/sales/DraftSalesList';
 import { generateInvoicePDF } from '../utils/generateInvoice';
@@ -26,6 +28,7 @@ type PageMode = 'list' | 'form';
 export default function SalesPage() {
   const { user } = useAuthStore();
   const canCreate = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
+  const loadRate = useCurrencyStore((s) => s.loadRate);
 
   const {
     currentSale,
@@ -71,6 +74,10 @@ export default function SalesPage() {
     }
   }, [loadSales, pageMode]);
 
+  useEffect(() => {
+    loadRate();
+  }, [loadRate]);
+
   const handleNewSale = () => {
     initNewSale();
     setPageMode('form');
@@ -91,10 +98,12 @@ export default function SalesPage() {
         paymentMethod: currentSale.paymentMethod as 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE',
         notes: currentSale.notes,
         freight: currentSale.freight,
+        currency: currentSale.currency,
+        paymentReference: currentSale.paymentReference || undefined,
       };
 
       const createdSale = await salesApi.create(saleData);
-      
+
       // Generar PDF
       if (createdSale) {
         generateInvoicePDF(createdSale);
@@ -135,6 +144,16 @@ export default function SalesPage() {
     if (c.clientType === 'JURIDICO') return c.companyName || 'Sin nombre';
     return `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Sin nombre';
   };
+
+  const displayTotal = (sale: Sale): string => {
+    if (sale.currency === 'BS' && sale.usdToBsRateAtSale) {
+      return formatBs(sale.total * sale.usdToBsRateAtSale);
+    }
+    return `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+  };
+
+  const formatTotal = (amount: number) =>
+    `$${amount.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 
   if (pageMode === 'form') {
     return (
@@ -251,10 +270,13 @@ export default function SalesPage() {
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
                         {PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}
+                        {sale.currency === 'BS' && (
+                          <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <p className="font-bold text-gray-900">
-                          ${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        <p className={`font-bold ${sale.currency === 'BS' ? 'text-primary-700' : 'text-gray-900'}`}>
+                          {displayTotal(sale)}
                         </p>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-500">
@@ -345,7 +367,12 @@ export default function SalesPage() {
               </div>
               <div>
                 <p className="text-gray-500">Método de pago</p>
-                <p className="font-semibold">{PAYMENT_LABELS[selectedSale.paymentMethod]}</p>
+                <p className="font-semibold">
+                  {PAYMENT_LABELS[selectedSale.paymentMethod]}
+                  {selectedSale.currency === 'BS' && (
+                    <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                  )}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">Fecha</p>
@@ -354,6 +381,13 @@ export default function SalesPage() {
                 </p>
               </div>
             </div>
+
+            {selectedSale.paymentReference && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                <span className="text-blue-700 font-medium">Referencia: </span>
+                <span className="text-blue-600">{selectedSale.paymentReference}</span>
+              </div>
+            )}
 
             <div className="border border-gray-100 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -381,18 +415,24 @@ export default function SalesPage() {
             <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
-                <span>${Number(selectedSale.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                <span>{formatTotal(selectedSale.subtotal)}</span>
               </div>
               {Number(selectedSale.discount) > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Descuento</span>
-                  <span>-${Number(selectedSale.discount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                  <span>-{formatTotal(selectedSale.discount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base border-t pt-1">
                 <span>TOTAL</span>
-                <span>${Number(selectedSale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                <span>{displayTotal(selectedSale)}</span>
               </div>
+              {selectedSale.currency === 'BS' && selectedSale.usdToBsRateAtSale && (
+                <div className="flex justify-between text-xs text-gray-500 border-t border-dashed pt-1">
+                  <span>USD (tasa {selectedSale.usdToBsRateAtSale})</span>
+                  <span>{formatTotal(selectedSale.total)}</span>
+                </div>
+              )}
             </div>
 
             {selectedSale.notes && (
