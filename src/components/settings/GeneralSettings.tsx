@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
+import { useCurrencyStore } from '../../store/currency.store';
 import type { Settings, Currency, UpdateSettingsInput } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -10,6 +11,7 @@ export default function GeneralSettings() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const loadRate = useCurrencyStore((s) => s.loadRate);
 
   const [form, setForm] = useState<UpdateSettingsInput>({});
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -141,6 +143,7 @@ export default function GeneralSettings() {
       setNewLogo(null);
       setRemoveLogo(false);
       setHasChanges(false);
+      loadRate();
       showToast('success', 'Configuración guardada exitosamente');
     } catch (error: any) {
       console.error('Error updating settings:', error);
