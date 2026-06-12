@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Search, ChevronRight, Loader2, Download } from 'lucide-react';
 import { specialOrdersApi } from '../api/specialOrders.api';
 import { clientsApi } from '../api/Clients.api';
 import { productsApi } from '../api/products.api';
 import { suppliersApi } from '../api/suppliers.api';
 import { activitiesApi } from '../api/activities.api';
 import { calendarEventsApi } from '../api/calendarEvents.api';
+import { purchaseOrdersApi } from '../api/purchaseOrders.api';
+import { salesApi } from '../api/sales.api';
 import type { SpecialOrder, OrderStatus, Product, Client, PaymentMethod } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -16,6 +18,8 @@ import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
 import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
+import { generateInvoicePDF } from '../utils/generateInvoice';
+import { generatePurchaseOrderPDF } from '../utils/generatePurchaseOrderPDF';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -194,6 +198,24 @@ export default function SpecialOrdersPage() {
       alert('Error al cancelar pedido');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDownloadPO = async (poId: string) => {
+    try {
+      const po = await purchaseOrdersApi.getById(poId);
+      generatePurchaseOrderPDF(po);
+    } catch {
+      alert('Error al descargar la orden de compra');
+    }
+  };
+
+  const handleDownloadInvoice = async (saleId: string) => {
+    try {
+      const sale = await salesApi.getById(saleId);
+      generateInvoicePDF(sale);
+    } catch {
+      alert('Error al descargar la factura');
     }
   };
 
@@ -704,13 +726,26 @@ export default function SpecialOrdersPage() {
                 </div>
               )}
               {selectedOrder.purchaseOrder && (
-                <div>
-                  <p className="text-gray-500">Orden de Compra</p>
-                  <p className="font-mono font-semibold">{selectedOrder.purchaseOrder.orderNumber}</p>
-                  <p className="text-gray-400 text-xs">{selectedOrder.purchaseOrder.status}</p>
-                  <p className="text-gray-400 text-xs">
-                    Total: ${selectedOrder.purchaseOrder.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                  </p>
+                <div className="col-span-2">
+                  <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-amber-700">Orden de Compra</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="!px-2 !py-1 !text-xs"
+                        onClick={() => handleDownloadPO(selectedOrder.purchaseOrder!.id)}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Descargar OC
+                      </Button>
+                    </div>
+                    <p className="font-mono font-semibold text-sm">{selectedOrder.purchaseOrder.orderNumber}</p>
+                    <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                      <span>Estado: {selectedOrder.purchaseOrder.status}</span>
+                      <span>Total: ${selectedOrder.purchaseOrder.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
                 </div>
               )}
               {selectedOrder.notifiedAt && (
@@ -732,7 +767,18 @@ export default function SpecialOrdersPage() {
               )}
               {selectedOrder.sale && (
                 <div className="col-span-2 bg-primary-50/60 border border-primary-100 rounded-xl p-3">
-                  <p className="text-sm font-semibold text-primary-700">Factura generada</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-primary-700">Factura generada</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!px-2 !py-1 !text-xs"
+                      onClick={() => handleDownloadInvoice(selectedOrder.sale!.id)}
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      Descargar Factura
+                    </Button>
+                  </div>
                   <p className="text-xs text-primary-700/80">
                     {selectedOrder.sale.saleNumber} · ${selectedOrder.sale.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                   </p>
