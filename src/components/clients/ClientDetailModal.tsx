@@ -90,15 +90,6 @@ export function ClientDetailModal({ isOpen, onClose, client }: ClientDetailModal
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Prospecto</label>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>{client.stage}</Badge>
-                <span className="text-xs text-gray-500">{client.source || 'Sin origen'}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">Último contacto: {client.lastContactAt ? new Date(client.lastContactAt).toLocaleString('es-VE') : 'Sin registro'}</p>
-            </div>
-
-            <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Contacto</label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" /><span>{client.phone}</span></div>

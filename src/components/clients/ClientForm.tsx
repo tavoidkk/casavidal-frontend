@@ -19,9 +19,6 @@ const clientSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   category: z.enum(['NUEVO', 'REGULAR', 'VIP', 'MAYORISTA', 'INACTIVO']).optional(),
-  stage: z.enum(['NUEVO', 'CONTACTADO', 'COTIZACION', 'GANADO', 'PERDIDO']).optional(),
-  source: z.enum(['REFERIDO', 'REDES', 'WHATSAPP', 'VISITA', 'OTRO']).optional(),
-  lastContactAt: z.string().optional(),
   notes: z.string().optional(),
 })
 .refine((data) => {
@@ -73,7 +70,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   const [docPrefix, setDocPrefix] = useState<string>('V');
   const [docNumber, setDocNumber] = useState<string>('');
   const [docCheck, setDocCheck] = useState<string>('');
-  const [isProspect, setIsProspect] = useState<boolean>(!!client && client.stage !== 'GANADO');
 
   const {
     register,
@@ -84,13 +80,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     formState: { errors },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
-    mode: 'onChange', // ← IMPORTANTE: Validar al cambiar
+    mode: 'onChange',
     defaultValues: {
       clientType: 'NATURAL',
       category: 'NUEVO',
-      stage: 'NUEVO',
-      source: undefined,
-      lastContactAt: '',
       firstName: '',
       lastName: '',
       companyName: '',
@@ -105,7 +98,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   });
 
   const clientType = watch('clientType');
-  const stageValue = watch('stage');
 
   // Construir documento (función auxiliar)
   const buildDocument = (type: string, prefix: string, number: string, check: string = ''): string => {
@@ -121,7 +113,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   // Inicializar cuando se carga un cliente
   useEffect(() => {
     if (client) {
-      setIsProspect(client.stage !== 'GANADO');
       const doc = client.document || client.rif || '';
       
       let parsedPrefix = 'V';
@@ -151,17 +142,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         firstName: client.firstName || '',
         lastName: client.lastName || '',
         companyName: client.companyName || '',
-        document: doc, // ← Documento completo
+        document: doc,
         email: client.email || '',
         phone: client.phone,
         address: client.address,
         city: client.city || '',
         state: client.state || '',
         category: client.category,
-        stage: client.stage,
-        source: client.source,
-        lastContactAt: client.lastContactAt ? client.lastContactAt.slice(0, 16) : '',
-        notes:  '',
+        notes: '',
       });
     }
   }, [client, reset]);
@@ -209,19 +197,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     updateDocument(docPrefix, docNumber, value);
   };
 
-  const handleFormSubmit = async (data: ClientFormData) => {
-    const payload: ClientFormData = {
-      ...data,
-      stage: isProspect ? data.stage || 'NUEVO' : 'GANADO',
-      lastContactAt: isProspect ? data.lastContactAt : '',
-      source: isProspect ? data.source : undefined,
-    };
-
-    await onSubmit(payload);
-  };
-
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* Tipo de Cliente */}
       <Select
         label="Tipo de Cliente *"
@@ -233,61 +210,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         ]}
         disabled={!!client}
       />
-
-      {/* Prospecto */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-        <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={isProspect}
-            onChange={(e) => setIsProspect(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-200"
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">Es prospecto</p>
-            <p className="text-xs text-gray-500">Activa el pipeline y seguimiento comercial</p>
-          </div>
-        </label>
-      </div>
-
-      {isProspect && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Etapa del Prospecto"
-              {...register('stage')}
-              error={errors.stage?.message}
-              options={[
-                { value: 'NUEVO', label: 'Nuevo' },
-                { value: 'CONTACTADO', label: 'Contactado' },
-                { value: 'COTIZACION', label: 'Cotización' },
-                { value: 'PERDIDO', label: 'Perdido' },
-              ]}
-            />
-            <Select
-              label="Origen"
-              {...register('source')}
-              error={errors.source?.message}
-              options={[
-                { value: 'REFERIDO', label: 'Referido' },
-                { value: 'REDES', label: 'Redes' },
-                { value: 'WHATSAPP', label: 'WhatsApp' },
-                { value: 'VISITA', label: 'Visita' },
-                { value: 'OTRO', label: 'Otro' },
-              ]}
-            />
-          </div>
-
-          {(client || stageValue !== 'NUEVO') && (
-            <Input
-              type="datetime-local"
-              label="Último contacto"
-              {...register('lastContactAt')}
-              error={errors.lastContactAt?.message}
-            />
-          )}
-        </>
-      )}
 
       {/* Persona Natural */}
       {clientType === 'NATURAL' && (

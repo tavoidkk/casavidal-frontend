@@ -133,13 +133,13 @@ export default function ClientsPage() {
             </div>
 
             {/* Filtro por categoría */}
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-36">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               >
-                <option value="">Todas las categorías</option>
+                <option value="">Categoría</option>
                 <option value="VIP">VIP</option>
                 <option value="MAYORISTA">Mayorista</option>
                 <option value="REGULAR">Regular</option>
@@ -148,13 +148,13 @@ export default function ClientsPage() {
             </div>
 
             {/* Filtro por etapa */}
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-32">
               <select
                 value={stageFilter}
                 onChange={(e) => setStageFilter(e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               >
-                <option value="">Todas las etapas</option>
+                <option value="">Etapa</option>
                 <option value="NUEVO">Nuevo</option>
                 <option value="CONTACTADO">Contactado</option>
                 <option value="COTIZACION">Cotización</option>
@@ -164,13 +164,13 @@ export default function ClientsPage() {
             </div>
 
             {/* Filtro por origen */}
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-32">
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               >
-                <option value="">Todos los orígenes</option>
+                <option value="">Origen</option>
                 <option value="REFERIDO">Referido</option>
                 <option value="REDES">Redes</option>
                 <option value="WHATSAPP">WhatsApp</option>
@@ -201,25 +201,25 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">
                       Cliente
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-3 font-semibold text-gray-700">
                       Contacto
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-semibold text-gray-700">
                       Categoría
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-semibold text-gray-700">
                       Etapa
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-semibold text-gray-700">
                       Origen
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-3 font-semibold text-gray-700">
                       Compras
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Scoring IA
+                    <th className="text-left py-3 px-3 font-semibold text-gray-700">
+                      Scoring
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-right py-3 px-3 font-semibold text-gray-700">
                       Acciones
                     </th>
                   </tr>
@@ -232,61 +232,61 @@ export default function ClientsPage() {
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium text-gray-900">
+                        <div className="truncate max-w-[220px]">
+                          <p className="font-medium text-gray-900 truncate">
                             {client.clientType === 'NATURAL'
                               ? `${client.firstName} ${client.lastName}`
                               : client.companyName}
                           </p>
                           {client.document && (
-                              <p className="text-sm text-gray-500">
+                              <p className="text-xs text-gray-500 truncate">
                                 {client.document}
                               </p>
                             )}
                           {client.rif && (
-                            <p className="text-sm text-gray-500">{client.rif}</p>
+                            <p className="text-xs text-gray-500 truncate">{client.rif}</p>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm">
-                          <p className="text-gray-900">{client.phone}</p>
+                      <td className="py-3 px-3">
+                        <div className="text-sm truncate max-w-[160px]">
+                          <p className="text-gray-900 truncate">{client.phone}</p>
                           {client.email && (
-                            <p className="text-gray-500">{client.email}</p>
+                            <p className="text-gray-500 truncate text-xs">{client.email}</p>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 whitespace-nowrap">
                         {getCategoryBadge(client.category)}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 whitespace-nowrap">
                         <Badge variant={client.stage === 'GANADO' ? 'success' : client.stage === 'PERDIDO' ? 'danger' : 'warning'}>
                           {client.stage}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 whitespace-nowrap">
                         <span className="text-sm text-gray-700">{client.source || '—'}</span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         <div className="text-sm">
                           <p className="text-gray-900 font-medium">
                             ${client.totalPurchases.toLocaleString()}
                           </p>
-                          <p className="text-gray-500">
+                          <p className="text-gray-500 text-xs">
                             {client.purchaseCount} compras
                           </p>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         {client.scoring && (
                           <div className="flex items-center">
                             <Star className="w-4 h-4 text-yellow-500 mr-1" />
                             <span className="font-medium">{client.scoring.score}</span>
-                            <span className="text-gray-500 text-sm">/100</span>
+                            <span className="text-gray-500 text-xs">/100</span>
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         <div className="flex justify-end space-x-2">
                           <button
                             onClick={() => {
