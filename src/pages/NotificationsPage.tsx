@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, ShoppingCart, Package, AlertCircle, Users, Check, Trash2, CheckCheck, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, ShoppingCart, Package, AlertCircle, Users, Activity, Check, Trash2, CheckCheck, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { notificationsApi } from '../api/notifications.api';
 import type { Notification, NotificationType } from '../types';
@@ -11,6 +11,7 @@ const typeIcons: Record<NotificationType, { icon: typeof Bell; color: string }> 
   PEDIDO_LISTO: { icon: Package, color: 'text-amber-500' },
   STOCK_BAJO: { icon: AlertCircle, color: 'text-red-500' },
   NUEVO_CLIENTE: { icon: Users, color: 'text-green-500' },
+  NUEVA_ACTIVIDAD: { icon: Activity, color: 'text-purple-500' },
   SISTEMA: { icon: Bell, color: 'text-gray-500' },
 };
 
@@ -20,6 +21,7 @@ const typeLabels: Record<string, string> = {
   PEDIDO_LISTO: 'Pedidos',
   STOCK_BAJO: 'Stock Bajo',
   NUEVO_CLIENTE: 'Nuevos Clientes',
+  NUEVA_ACTIVIDAD: 'Nuevas Actividades',
   SISTEMA: 'Sistema',
 };
 

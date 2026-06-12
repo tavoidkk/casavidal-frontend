@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Filter, Search, CalendarClock, AlertTriangle, PlusCircle, XCircle, Eye, Clock, Lightbulb, Check, X, Sparkles, User, ArrowUpRight } from 'lucide-react';
 import { activitiesApi } from '../api/activities.api';
 import { suggestionsApi } from '../api/suggestions.api';
@@ -53,6 +53,7 @@ const priorityLabel = (p: number) => {
 
 export default function CRMPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>('agenda');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -83,6 +84,7 @@ export default function CRMPage() {
   });
 
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -98,6 +100,15 @@ export default function CRMPage() {
       showToast('error', 'No se pudieron cargar las actividades.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshActivities = async () => {
+    try {
+      const data = await activitiesApi.getAllActivities();
+      setActivities(data);
+    } catch {
+      // silencioso
     }
   };
 
@@ -130,6 +141,14 @@ export default function CRMPage() {
     };
     loadClients();
   }, []);
+
+  // Resaltar actividad desde URL (?highlight=id)
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (highlightId && !loading && activities.length > 0) {
+      highlightAndScroll(highlightId);
+    }
+  }, [searchParams, loading, activities]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -167,6 +186,13 @@ export default function CRMPage() {
     });
   }, [activities, search, typeFilter, statusFilter]);
 
+  const highlightAndScroll = (id: string) => {
+    setHighlightedId(id);
+    setTimeout(() => {
+      document.getElementById(`activity-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
   const agenda = useMemo(() => {
     const base = new Date();
     base.setHours(0, 0, 0, 0);
@@ -185,15 +211,30 @@ export default function CRMPage() {
       const dt = new Date(a.scheduledFor || a.createdAt);
       return dt >= tomorrow && dt < nextWeek;
     });
-    return { overdue, todayItems, nextItems };
+    const lost = activities.filter((a) => a.status === 'PERDIDA');
+    return { overdue, todayItems, nextItems, lost };
   }, [activities]);
 
+  // Almacena el badge count al visitar CRM para que el sidebar sepa que ya se vieron
+  useEffect(() => {
+    if (!loading) {
+      const badgeCount = (kpis.pending || 0) + (suggestionCount || 0);
+      localStorage.setItem('crmBadgeSeen', badgeCount.toString());
+    }
+  }, [loading, kpis.pending, suggestionCount]);
+
   const markComplete = async (activity: Activity) => {
+    const prev = activities.find(a => a.id === activity.id);
+    setActivities(prev => prev.map(a =>
+      a.id === activity.id ? { ...a, status: 'COMPLETADA' as const } : a
+    ));
     try {
       await activitiesApi.updateActivity(activity.id, { status: 'COMPLETADA' });
-      await loadActivities();
       showToast('success', 'Actividad completada.');
     } catch {
+      if (prev) setActivities(p => p.map(a =>
+        a.id === activity.id ? prev : a
+      ));
       showToast('error', 'No se pudo completar la actividad.');
     }
   };
@@ -212,18 +253,25 @@ export default function CRMPage() {
       showToast('error', 'Debe seleccionar una fecha y hora.');
       return;
     }
+    const prev = activities.find(a => a.id === activityToReschedule.id);
+    const newDate = new Date(rescheduleDate).toISOString();
+    setActivities(prev => prev.map(a =>
+      a.id === activityToReschedule.id ? { ...a, scheduledFor: newDate, status: 'PENDIENTE' as const } : a
+    ));
     try {
       setRescheduling(true);
       await activitiesApi.updateActivity(activityToReschedule.id, {
-        scheduledFor: new Date(rescheduleDate).toISOString(),
+        scheduledFor: newDate,
         status: 'PENDIENTE',
       });
-      await loadActivities();
       setIsRescheduleOpen(false);
       setActivityToReschedule(null);
       setRescheduleDate('');
       showToast('success', 'Actividad reagendada correctamente.');
     } catch {
+      if (prev) setActivities(p => p.map(a =>
+        a.id === activityToReschedule.id ? prev : a
+      ));
       showToast('error', 'No se pudo reagendar la actividad.');
     } finally {
       setRescheduling(false);
@@ -248,11 +296,17 @@ export default function CRMPage() {
   };
 
   const cancelActivity = async (activity: Activity) => {
+    const prev = activities.find(a => a.id === activity.id);
+    setActivities(prev => prev.map(a =>
+      a.id === activity.id ? { ...a, status: 'CANCELADA' as const } : a
+    ));
     try {
       await activitiesApi.updateActivity(activity.id, { status: 'CANCELADA' });
-      await loadActivities();
       showToast('success', 'Actividad cancelada.');
     } catch {
+      if (prev) setActivities(p => p.map(a =>
+        a.id === activity.id ? prev : a
+      ));
       showToast('error', 'No se pudo cancelar la actividad.');
     }
   };
@@ -264,16 +318,16 @@ export default function CRMPage() {
     }
     try {
       setCreating(true);
-      await activitiesApi.createActivity({
+      const newActivity = await activitiesApi.createActivity({
         clientId: form.clientId,
         type: form.type,
         title: form.title.trim(),
         description: form.description.trim() || undefined,
         scheduledFor: form.scheduledFor || undefined,
       });
+      setActivities(prev => [newActivity, ...prev]);
       setForm({ clientId: '', type: 'SEGUIMIENTO', title: '', description: '', scheduledFor: '' });
       setIsCreateOpen(false);
-      await loadActivities();
       showToast('success', 'Actividad creada.');
     } catch {
       showToast('error', 'Error al crear actividad.');
@@ -285,9 +339,11 @@ export default function CRMPage() {
   const handleApplySuggestion = async (suggestion: Suggestion) => {
     setApplyingId(suggestion.id);
     try {
-      await suggestionsApi.applySuggestion(suggestion.id);
+      const newActivity = await suggestionsApi.applySuggestion(suggestion.id);
+      setActivities(prev => [newActivity as Activity, ...prev]);
+      setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+      setSuggestionCount(prev => Math.max(0, prev - 1));
       showToast('success', 'Sugerencia aplicada: actividad creada.');
-      await Promise.all([loadActivities(), loadSuggestions()]);
     } catch {
       showToast('error', 'Error al aplicar sugerencia.');
     } finally {
@@ -316,7 +372,21 @@ export default function CRMPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 font-display">CRM</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold text-gray-900 font-display">CRM</h1>
+            {kpis.pending > 0 && !loading && (
+              <span className="bg-amber-100 text-amber-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                {kpis.pending} pendiente{kpis.pending !== 1 ? 's' : ''}
+              </span>
+            )}
+            {suggestionCount > 0 && !loading && (
+              <span className="bg-primary-100 text-primary-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                {suggestionCount} sugerencia{suggestionCount !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">Agenda comercial, seguimiento y sugerencias inteligentes</p>
         </div>
         <div className="flex gap-2">
@@ -353,12 +423,15 @@ export default function CRMPage() {
 
       {tab === 'agenda' ? (
         <>
-          {agenda.overdue.length > 0 && (
+          {(agenda.overdue.length > 0 || agenda.lost.length > 0) && (
             <Card className="mb-4 border border-red-200 bg-red-50">
               <div className="flex items-center gap-2 text-red-700">
                 <AlertTriangle className="w-5 h-5" />
                 <p className="font-medium">
-                  Tienes {agenda.overdue.length} actividad{agenda.overdue.length !== 1 ? 'es' : ''} vencida{agenda.overdue.length !== 1 ? 's' : ''}.
+                  Tienes {agenda.overdue.length} actividad{agenda.overdue.length !== 1 ? 'es' : ''} vencida{agenda.overdue.length !== 1 ? 's' : ''}
+                  {agenda.lost.length > 0 && (
+                    <> y {agenda.lost.length} perdida{agenda.lost.length !== 1 ? 's' : ''}</>
+                  )}.
                 </p>
               </div>
             </Card>
@@ -372,9 +445,17 @@ export default function CRMPage() {
               </div>
               <div className="space-y-2 text-sm">
                 {agenda.overdue.slice(0, 4).map((a) => (
-                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                  <button key={a.id} onClick={() => highlightAndScroll(a.id)} className="text-gray-700 truncate w-full text-left hover:text-primary-600 hover:underline transition-colors">{a.title}</button>
                 ))}
-                {agenda.overdue.length === 0 && <p className="text-gray-400">Sin vencidas</p>}
+                {agenda.lost.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-3 mb-1">Perdidas</p>
+                    {agenda.lost.slice(0, 4).map((a) => (
+                      <button key={a.id} onClick={() => highlightAndScroll(a.id)} className="text-gray-500 truncate w-full text-left hover:text-primary-600 hover:underline transition-colors">{a.title}</button>
+                    ))}
+                  </>
+                )}
+                {agenda.overdue.length === 0 && agenda.lost.length === 0 && <p className="text-gray-400">Sin vencidas ni perdidas</p>}
               </div>
             </Card>
             <Card>
@@ -384,7 +465,7 @@ export default function CRMPage() {
               </div>
               <div className="space-y-2 text-sm">
                 {agenda.todayItems.slice(0, 4).map((a) => (
-                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                  <button key={a.id} onClick={() => highlightAndScroll(a.id)} className="text-gray-700 truncate w-full text-left hover:text-primary-600 hover:underline transition-colors">{a.title}</button>
                 ))}
                 {agenda.todayItems.length === 0 && <p className="text-gray-400">Sin actividades para hoy</p>}
               </div>
@@ -396,7 +477,7 @@ export default function CRMPage() {
               </div>
               <div className="space-y-2 text-sm">
                 {agenda.nextItems.slice(0, 4).map((a) => (
-                  <p key={a.id} className="text-gray-700 truncate">{a.title}</p>
+                  <button key={a.id} onClick={() => highlightAndScroll(a.id)} className="text-gray-700 truncate w-full text-left hover:text-primary-600 hover:underline transition-colors">{a.title}</button>
                 ))}
                 {agenda.nextItems.length === 0 && <p className="text-gray-400">Sin próximas actividades</p>}
               </div>
@@ -464,7 +545,7 @@ export default function CRMPage() {
                   const activityDate = new Date(a.scheduledFor || a.createdAt);
                   const isFuturePending = status === 'PENDIENTE' && activityDate >= todayEnd;
                   return (
-                    <motion.tr key={a.id} variants={staggerItem} className="border-b border-gray-100">
+                    <motion.tr key={a.id} id={`activity-${a.id}`} variants={staggerItem} className={`border-b border-gray-100 transition-colors ${highlightedId === a.id ? 'bg-primary-50' : ''}`}>
                       <td className="py-3 px-2">{clientName}</td>
                       <td className="py-3 px-2"><Badge variant="default">{a.type}</Badge></td>
                       <td className="py-3 px-2">{a.title}</td>

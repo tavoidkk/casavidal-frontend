@@ -37,6 +37,23 @@ export default function SuppliersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Partes del RIF (J-12345678-9)
+  const [rifPrefix, setRifPrefix] = useState('J');
+  const [rifNumber, setRifNumber] = useState('');
+  const [rifCheck, setRifCheck] = useState('');
+
+  useEffect(() => {
+    const full = rifNumber ? `${rifPrefix}-${rifNumber}${rifCheck ? `-${rifCheck}` : ''}` : '';
+    setForm((prev) => ({ ...prev, rif: full }));
+  }, [rifPrefix, rifNumber, rifCheck]);
+
+  const parseRif = (rif: string) => {
+    const parts = rif.split('-');
+    setRifPrefix(parts[0] || 'J');
+    setRifNumber(parts[1] || '');
+    setRifCheck(parts[2] || '');
+  };
+
   const loadSuppliers = useCallback(async () => {
     setLoading(true);
     try {
@@ -56,6 +73,9 @@ export default function SuppliersPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setRifPrefix('J');
+    setRifNumber('');
+    setRifCheck('');
     setErrors({});
     setIsModalOpen(true);
   };
@@ -71,6 +91,7 @@ export default function SuppliersPage() {
       address: supplier.address || '',
       notes: supplier.notes || '',
     });
+    if (supplier.rif) parseRif(supplier.rif);
     setErrors({});
     setIsModalOpen(true);
   };
@@ -79,6 +100,7 @@ export default function SuppliersPage() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'El nombre es requerido';
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Email inválido';
+    if (form.rif && !/^[JG]-\d{7,9}-\d$/.test(form.rif)) e.rif = 'Formato de RIF inválido (Ej: J-12345678-9)';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -262,12 +284,38 @@ export default function SuppliersPage() {
                 placeholder="Distribuidora Ejemplo C.A."
               />
             </div>
-            <Input
-              label="RIF"
-              value={form.rif || ''}
-              onChange={(e) => setField('rif', e.target.value)}
-              placeholder="J-12345678-9"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RIF</label>
+              <div className="flex gap-2">
+                <select
+                  value={rifPrefix}
+                  onChange={(e) => setRifPrefix(e.target.value)}
+                  className="w-20 px-2 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 bg-white"
+                >
+                  <option value="J">J</option>
+                  <option value="G">G</option>
+                </select>
+                <span className="flex items-center text-gray-500 font-medium">-</span>
+                <input
+                  type="text"
+                  value={rifNumber}
+                  onChange={(e) => setRifNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                  placeholder="12345678"
+                  className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                />
+                <span className="flex items-center text-gray-500 font-medium">-</span>
+                <input
+                  type="text"
+                  value={rifCheck}
+                  onChange={(e) => setRifCheck(e.target.value.replace(/\D/g, '').slice(0, 1))}
+                  placeholder="0"
+                  maxLength={1}
+                  className="w-16 px-3 py-2.5 border border-gray-200 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                />
+              </div>
+              {errors.rif && <p className="text-red-500 text-sm mt-1">{errors.rif}</p>}
+              <p className="text-gray-500 text-xs mt-1">J = Jurídico, G = Gobierno</p>
+            </div>
             <Input
               label="Teléfono"
               value={form.phone || ''}

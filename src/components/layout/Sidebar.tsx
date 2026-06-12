@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Package, ShoppingCart, FileText, Activity, ClipboardList, Truck, CalendarDays, BarChart3, Bell } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
+import { dashboardApi } from '../../api/dashboard.api';
+import { suggestionsApi } from '../../api/suggestions.api';
 
 const menuItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -18,11 +20,13 @@ const menuItems = [
 ];
 
 export default function Sidebar() {
+  const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const stored = window.localStorage.getItem('sidebarCollapsed');
     return stored === 'true';
   });
+  const [crmBadge, setCrmBadge] = useState(0);
 
   useEffect(() => {
     window.localStorage.setItem('sidebarCollapsed', String(isCollapsed));
@@ -33,13 +37,32 @@ export default function Sidebar() {
       try {
         const settings = await settingsApi.getSettings();
         if (settings.companyLogo) {
-          setLogoUrl(settings.companyLogo);
+          setLogoUrl((prev) => prev !== settings.companyLogo ? settings.companyLogo : prev);
         }
       } catch {
         // Silenciar
       }
     };
     loadLogo();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const fetchCrmBadge = async () => {
+      try {
+        const [pending, suggestions] = await Promise.all([
+          dashboardApi.getPendingActivities(),
+          suggestionsApi.getSuggestionCount(),
+        ]);
+        const current = (pending.pendingTasks || 0) + (suggestions || 0);
+        const seen = parseInt(localStorage.getItem('crmBadgeSeen') || '0', 10);
+        setCrmBadge(current > seen ? current : 0);
+      } catch {
+        // Silenciar
+      }
+    };
+    fetchCrmBadge();
+    const interval = setInterval(fetchCrmBadge, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -56,6 +79,7 @@ export default function Sidebar() {
               src={logoUrl}
               alt="Logo"
               className="h-10 w-10 rounded-2xl object-cover"
+              onError={() => setLogoUrl(null)}
             />
           ) : (
             <div className="h-10 w-10 rounded-2xl bg-white/20 text-white flex items-center justify-center font-display font-semibold backdrop-blur-sm">
@@ -90,7 +114,7 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center px-3 py-3 rounded-xl transition-all ${isCollapsed ? 'justify-center gap-0' : 'gap-3'} ${
+              `flex items-center px-3 py-3 rounded-xl transition-all ${isCollapsed ? 'justify-center gap-0 relative' : 'gap-3'} ${
                 isActive
                   ? 'bg-white/20 text-white shadow-sm backdrop-blur-sm'
                   : 'text-primary-100 hover:bg-primary-600/50 hover:text-white'
@@ -99,6 +123,11 @@ export default function Sidebar() {
           >
             <item.icon className="w-5 h-5" />
             {!isCollapsed && <span className="font-medium">{item.label}</span>}
+            {item.to === '/crm' && crmBadge > 0 && (
+              <span className={`ml-auto bg-amber-400 text-amber-900 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${isCollapsed ? 'absolute top-0 right-0' : ''}`}>
+                {crmBadge > 99 ? '99+' : crmBadge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

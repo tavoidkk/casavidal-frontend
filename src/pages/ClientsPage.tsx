@@ -361,7 +361,7 @@ export default function ClientsPage() {
           setSelectedClient(null);
         }}
         title={selectedClient ? 'Editar Cliente' : 'Nuevo Cliente'}
-        size="lg"
+        size="md"
       >
         <ClientForm
           client={selectedClient}

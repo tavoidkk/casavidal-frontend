@@ -236,6 +236,7 @@ export default function GeneralSettings() {
                       src={logoPreview}
                       alt="Logo preview"
                       className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                      onError={() => setLogoPreview(null)}
                     />
                     <button
                       type="button"

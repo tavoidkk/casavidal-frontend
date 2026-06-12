@@ -18,6 +18,7 @@ export interface PendingActivity {
 export interface PendingActivities {
   pendingTasks: number;
   todayAppointments: PendingActivity[];
+  allAppointments: PendingActivity[];
 }
 
 export const dashboardApi = {

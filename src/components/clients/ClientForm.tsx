@@ -198,7 +198,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       {/* Tipo de Cliente */}
       <Select
         label="Tipo de Cliente *"
@@ -214,7 +214,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       {/* Persona Natural */}
       {clientType === 'NATURAL' && (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <Input
               label="Nombre"
               {...register('firstName')}
@@ -315,7 +315,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       )}
 
       {/* Contacto */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <Input
           label="Email"
           type="email"
@@ -338,7 +338,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         placeholder="Av. 5 de Julio, Casa 123"
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <Input
           label="Ciudad"
           {...register('city')}
@@ -351,19 +351,18 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           error={errors.state?.message}
           placeholder="Zulia"
         />
+        <Select
+          label="Categoría"
+          {...register('category')}
+          error={errors.category?.message}
+          options={[
+            { value: 'NUEVO', label: 'Nuevo' },
+            { value: 'REGULAR', label: 'Regular' },
+            { value: 'VIP', label: 'VIP' },
+            { value: 'MAYORISTA', label: 'Mayorista' },
+          ]}
+        />
       </div>
-
-      <Select
-        label="Categoría"
-        {...register('category')}
-        error={errors.category?.message}
-        options={[
-          { value: 'NUEVO', label: 'Nuevo' },
-          { value: 'REGULAR', label: 'Regular' },
-          { value: 'VIP', label: 'VIP' },
-          { value: 'MAYORISTA', label: 'Mayorista' },
-        ]}
-      />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -371,7 +370,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         </label>
         <textarea
           {...register('notes')}
-          rows={3}
+          rows={2}
           className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           placeholder="Información adicional..."
         />
@@ -379,7 +378,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
       <input type="hidden" {...register('document')} />
 
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+      <div className="flex justify-end space-x-3 pt-3 border-t border-gray-100">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancelar
         </Button>

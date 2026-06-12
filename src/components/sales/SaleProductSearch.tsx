@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Search, X, Plus, ScanLine } from 'lucide-react';
+import { Search, X, ScanLine } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { Modal } from '../ui/Modal';
 import { BarcodeScanner } from '../common/BarcodeScanner';
 import { productsApi } from '../../api/products.api';
 import { useCurrencyStore } from '../../store/currency.store';
 import { formatBs } from '../../utils/currency';
-import type { Category } from '../../api/products.api';
 import type { Product } from '../../types';
 
 interface SaleProductSearchProps {
@@ -17,20 +15,9 @@ interface SaleProductSearchProps {
 
 export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProductSearchProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    categoryId: '',
-    salePrice: '',
-    costPrice: '',
-    currentStock: '0',
-  });
   const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
 
   const loadProducts = useCallback(async (query = '') => {
@@ -53,10 +40,6 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
     return () => window.clearTimeout(timeout);
   }, [loadProducts, search]);
 
-  useEffect(() => {
-    productsApi.getCategories().then(setCategories).catch(console.error);
-  }, []);
-
   const handleSelectProduct = (product: Product) => {
     onSelectProduct(
       {
@@ -72,40 +55,10 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
     setQuantity(1);
   };
 
-  const handleCreateProduct = async () => {
-    if (!formData.name || !formData.sku || !formData.categoryId || !formData.salePrice) return;
-    setIsSubmitting(true);
-    try {
-      const salePrice = Number(formData.salePrice);
-      const costPrice = formData.costPrice ? Number(formData.costPrice) : salePrice;
-      const currentStock = Math.max(0, Number(formData.currentStock || 0));
-      const created = await productsApi.create({
-        name: formData.name,
-        sku: formData.sku,
-        categoryId: formData.categoryId,
-        costPrice,
-        salePrice,
-        currentStock,
-        unit: 'unidad',
-      });
-      setProducts((prev) => [created, ...prev]);
-      setIsCreateOpen(false);
-      setFormData({ name: '', sku: '', categoryId: '', salePrice: '', costPrice: '', currentStock: '0' });
-    } catch (error) {
-      console.error('Error creating product:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <Card className="p-4 bg-white border border-gray-200">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2">
         <label className="block text-sm font-semibold text-gray-700">Productos</label>
-        <Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          Crear
-        </Button>
       </div>
 
       <div className="relative mb-3">
@@ -175,94 +128,6 @@ export function SaleProductSearch({ onSelectProduct, searchInputRef }: SaleProdu
       {products.length === 0 && (
         <div className="text-center py-4 text-sm text-gray-500">No se encontraron productos</div>
       )}
-
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Crear producto">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              placeholder="Nombre del producto"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
-            <input
-              type="text"
-              value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              placeholder="SKU"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
-            <select
-              value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-            >
-              <option value="">Seleccionar</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.salePrice}
-                onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-                placeholder="0.00"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Costo</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Stock inicial</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={formData.currentStock}
-              onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              placeholder="0"
-            />
-          </div>
-          <div className="flex gap-2 pt-4 border-t border-gray-100">
-            <Button variant="secondary" onClick={() => setIsCreateOpen(false)} className="flex-1">
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleCreateProduct}
-              className="flex-1"
-              disabled={!formData.name || !formData.sku || !formData.categoryId || !formData.salePrice || isSubmitting}
-            >
-              Crear Producto
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {showScanner && (
         <BarcodeScanner

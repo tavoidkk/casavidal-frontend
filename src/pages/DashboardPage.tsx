@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Check, X, Sparkles as SparklesIcon, Lightbulb, CheckCircle2, User, ArrowUpRight, Clock as ClockIcon, TrendingUp, Users, Package, AlertCircle, ShoppingCart, ListTodo } from 'lucide-react';
+import { Check, X, Sparkles as SparklesIcon, Lightbulb, CheckCircle2, XCircle, User, ArrowUpRight, Clock as ClockIcon, TrendingUp, Users, Package, AlertCircle, ShoppingCart, ListTodo, CalendarDays, List } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [suggestionCount, setSuggestionCount] = useState(0);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [activityTab, setActivityTab] = useState<'todas' | 'hoy'>('todas');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingTrend, setLoadingTrend] = useState(true);
@@ -537,12 +538,32 @@ export default function DashboardPage() {
       <Card className="mt-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900 font-display flex items-center gap-2">
-            <ListTodo className="w-5 h-5 text-primary-500" /> Actividades Pendientes
+            <ListTodo className="w-5 h-5 text-primary-500" />{' '}
+            {activityTab === 'todas' ? 'Todas las Actividades' : 'Actividades de Hoy'}
           </h2>
           <span className="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full font-medium">
             {loadingActivities ? '…' : `${pendingActivities?.pendingTasks ?? 0} tareas`}
           </span>
         </div>
+
+        {/* Tabs Todas / Hoy */}
+        <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActivityTab('todas')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activityTab === 'todas' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <List className="w-3.5 h-3.5 inline mr-1.5" />
+            Todas
+          </button>
+          <button
+            onClick={() => setActivityTab('hoy')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activityTab === 'hoy' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <CalendarDays className="w-3.5 h-3.5 inline mr-1.5" />
+            Hoy
+          </button>
+        </div>
+
         {loadingActivities ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -558,32 +579,93 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        ) : !pendingActivities || pendingActivities.todayAppointments.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4">No hay actividades programadas para hoy</p>
+        ) : !pendingActivities ? (
+          <p className="text-gray-400 text-sm text-center py-4">No hay actividades</p>
         ) : (
-          <div className="space-y-3">
-            {pendingActivities.todayAppointments.map((act) => (
-              <div key={act.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : act.status === 'PERDIDA' ? 'bg-red-400' : 'bg-green-400'}`} />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{act.subject}</p>
-                    <p className="text-xs text-gray-500">
-                      {act.client
-                        ? act.client.clientType === 'JURIDICO'
-                          ? act.client.companyName
-                          : `${act.client.firstName || ''} ${act.client.lastName || ''}`
-                        : 'Sin cliente'}
-                    </p>
+          <div className="space-y-2">
+            {activityTab === 'todas'
+              ? pendingActivities.allAppointments.filter(a => a.status === 'PENDIENTE').slice(0, 5).map((act) => (
+                  <div
+                    key={act.id}
+                    onClick={() => navigate(`/crm?highlight=${act.id}`)}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{act.subject}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {act.client
+                            ? act.client.clientType === 'JURIDICO'
+                              ? act.client.companyName
+                              : `${act.client.firstName || ''} ${act.client.lastName || ''}`
+                            : 'Sin cliente'}
+                          {act.dueDate && (
+                            <span className="ml-2 text-gray-400">{format(new Date(act.dueDate), 'd MMM HH:mm', { locale: es })}</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                {act.dueDate && (
-                  <span className="text-xs text-gray-400">
-                    {format(new Date(act.dueDate), 'HH:mm', { locale: es })}
-                  </span>
-                )}
-              </div>
-            ))}
+                ))
+              : pendingActivities.todayAppointments.slice(0, 5).map((act) => {
+                  const isDone = act.status === 'COMPLETADA';
+                  const isCancelled = act.status === 'CANCELADA' || act.status === 'PERDIDA';
+                  return (
+                    <div
+                      key={act.id}
+                      onClick={() => navigate(`/crm?highlight=${act.id}`)}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        ) : isCancelled ? (
+                          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className={`text-sm font-medium truncate ${isDone ? 'line-through text-green-600' : isCancelled ? 'line-through text-red-500' : 'text-gray-900'}`}>
+                            {act.subject}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {act.client
+                              ? act.client.clientType === 'JURIDICO'
+                                ? act.client.companyName
+                                : `${act.client.firstName || ''} ${act.client.lastName || ''}`
+                              : 'Sin cliente'}
+                            {act.dueDate && (
+                              <span className="ml-2 text-gray-400">{format(new Date(act.dueDate), 'd MMM HH:mm', { locale: es })}</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${isDone ? 'bg-green-100 text-green-700' : isCancelled ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {isDone ? 'Completada' : isCancelled ? act.status === 'CANCELADA' ? 'Cancelada' : 'Perdida' : 'Pendiente'}
+                      </span>
+                    </div>
+                  );
+                })}
+            {(() => {
+              const items = activityTab === 'todas'
+                ? pendingActivities.allAppointments.filter(a => a.status === 'PENDIENTE')
+                : pendingActivities.todayAppointments;
+              if (items.length === 0) {
+                return <p className="text-gray-400 text-sm text-center py-4">{activityTab === 'todas' ? 'No hay actividades pendientes' : 'No hay actividades para hoy'}</p>;
+              }
+              if (items.length > 5) {
+                return (
+                  <button
+                    onClick={() => navigate('/crm')}
+                    className="w-full text-center text-sm text-primary-600 hover:text-primary-700 font-medium py-2 hover:bg-primary-50 rounded-lg transition-colors"
+                  >
+                    Ver más ({items.length - 5} restantes)
+                  </button>
+                );
+              }
+              return null;
+            })()}
           </div>
         )}
       </Card>

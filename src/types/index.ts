@@ -322,7 +322,7 @@ export interface TopClient {
 }
 
 // Notification
-export type NotificationType = 'STOCK_BAJO' | 'VENTA_COMPLETADA' | 'PEDIDO_LISTO' | 'NUEVO_CLIENTE' | 'SISTEMA';
+export type NotificationType = 'STOCK_BAJO' | 'VENTA_COMPLETADA' | 'PEDIDO_LISTO' | 'NUEVO_CLIENTE' | 'NUEVA_ACTIVIDAD' | 'SISTEMA';
 
 export interface Notification {
   id: string;
