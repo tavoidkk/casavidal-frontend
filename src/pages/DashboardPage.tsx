@@ -28,48 +28,145 @@ export default function DashboardPage() {
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [pendingActivities, setPendingActivities] = useState<PendingActivities | null>(null);
   const [suggestionCount, setSuggestionCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingTrend, setLoadingTrend] = useState(true);
+  const [loadingTopProducts, setLoadingTopProducts] = useState(true);
+  const [loadingTopClients, setLoadingTopClients] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadAll = async () => {
+    let isActive = true;
+
+    const loadStats = async () => {
       try {
-        const [s, t, tp, tc, pa, sc] = await Promise.all([
-          cachedFetch('dashboard:stats', () => dashboardApi.getStats()),
-          cachedFetch('dashboard:sales-trend', () => dashboardApi.getSalesTrend(14)),
-          cachedFetch('dashboard:top-products', () => dashboardApi.getTopProducts(5)),
-          cachedFetch('dashboard:top-clients', () => dashboardApi.getTopClients(5)),
-          cachedFetch('dashboard:pending', () => dashboardApi.getPendingActivities()),
-          cachedFetch('dashboard:suggestions-count', () => suggestionsApi.getSuggestionCount()).catch(() => 0),
-        ]);
-        setStats(s);
-        setTrend(t);
-        setTopProducts(tp);
-        setTopClients(tc);
-        setPendingActivities(pa);
-        setSuggestionCount(sc);
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
+        const s = await cachedFetch('dashboard:stats', () => dashboardApi.getStats());
+        if (isActive) {
+          setStats(s);
+        }
+      } catch (statsError) {
+        console.error('Error loading dashboard stats:', statsError);
+        if (isActive) {
+          setError('No se pudo cargar el resumen del dashboard.');
+        }
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setInitialLoading(false);
+        }
       }
     };
-    loadAll();
+
+    const loadTrend = async () => {
+      try {
+        const t = await cachedFetch('dashboard:sales-trend', () => dashboardApi.getSalesTrend(14));
+        if (isActive) {
+          setTrend(t);
+        }
+      } catch (trendError) {
+        console.error('Error loading sales trend:', trendError);
+        if (isActive) {
+          setTrend([]);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingTrend(false);
+        }
+      }
+    };
+
+    const loadTopProducts = async () => {
+      try {
+        const tp = await cachedFetch('dashboard:top-products', () => dashboardApi.getTopProducts(5));
+        if (isActive) {
+          setTopProducts(tp);
+        }
+      } catch (topProductsError) {
+        console.error('Error loading top products:', topProductsError);
+        if (isActive) {
+          setTopProducts([]);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingTopProducts(false);
+        }
+      }
+    };
+
+    const loadTopClients = async () => {
+      try {
+        const tc = await cachedFetch('dashboard:top-clients', () => dashboardApi.getTopClients(5));
+        if (isActive) {
+          setTopClients(tc);
+        }
+      } catch (topClientsError) {
+        console.error('Error loading top clients:', topClientsError);
+        if (isActive) {
+          setTopClients([]);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingTopClients(false);
+        }
+      }
+    };
+
+    const loadPendingActivities = async () => {
+      try {
+        const pa = await cachedFetch('dashboard:pending', () => dashboardApi.getPendingActivities());
+        if (isActive) {
+          setPendingActivities(pa);
+        }
+      } catch (pendingError) {
+        console.error('Error loading pending activities:', pendingError);
+        if (isActive) {
+          setPendingActivities(null);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingActivities(false);
+        }
+      }
+    };
+
+    const loadSuggestionsCount = async () => {
+      try {
+        const sc = await cachedFetch('dashboard:suggestions-count', () => suggestionsApi.getSuggestionCount());
+        if (isActive) {
+          setSuggestionCount(sc ?? 0);
+        }
+      } catch (suggestionsError) {
+        console.error('Error loading suggestions count:', suggestionsError);
+        if (isActive) {
+          setSuggestionCount(0);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingSuggestions(false);
+        }
+      }
+    };
+
+    loadStats();
+    loadTrend();
+    loadTopProducts();
+    loadTopClients();
+    loadPendingActivities();
+    loadSuggestionsCount();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
-      </div>
-    );
-  }
+  const isSuggestionsLoading = loadingSuggestions && suggestionCount === 0;
 
   const statCards = [
       {
         icon: TrendingUp,
         label: 'Ventas Hoy',
-        value: `$${(stats?.salesToday.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-        sub: `${stats?.salesToday.count || 0} transacciones`,
+         value: `$${(stats?.salesToday.total || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
+         sub: `${stats?.salesToday.count || 0} transacciones`,
         color: 'bg-primary-500',
         onClick: () => navigate('/sales'),
       },
@@ -108,8 +205,8 @@ export default function DashboardPage() {
     {
       icon: Sparkles,
       label: 'Sugerencias CRM',
-      value: String(suggestionCount),
-      sub: 'acciones recomendadas',
+       value: isSuggestionsLoading ? '…' : String(suggestionCount),
+       sub: isSuggestionsLoading ? 'Cargando sugerencias…' : 'acciones recomendadas',
       color: 'bg-purple-500',
       onClick: () => navigate('/crm'),
     },
@@ -130,6 +227,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* Stats Grid */}
       <motion.div
         variants={staggerContainer}
@@ -139,14 +242,23 @@ export default function DashboardPage() {
       >
         {statCards.map((stat, index) => (
           <motion.div key={index} variants={staggerItem}>
-            <Card interactive onClick={stat.onClick}>
+            <Card interactive={!initialLoading} onClick={initialLoading ? undefined : stat.onClick}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+                  {initialLoading ? (
+                    <>
+                      <div className="h-6 w-28 rounded bg-gray-200 animate-pulse" />
+                      <div className="mt-2 h-3 w-24 rounded bg-gray-100 animate-pulse" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+                    </>
+                  )}
                 </div>
-                <div className={`${stat.color} p-3 rounded-2xl shrink-0 shadow-sm`}>
+                <div className={`${stat.color} p-3 rounded-2xl shrink-0 shadow-sm`}> 
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -158,7 +270,9 @@ export default function DashboardPage() {
       {/* Gráfica de ventas */}
       <Card className="mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Ventas últimos 14 días</h2>
-        {trendData.every((d) => d.total === 0) ? (
+        {loadingTrend ? (
+          <div className="h-40 w-full animate-pulse rounded-xl bg-gray-100" />
+        ) : trendData.every((d) => d.total === 0) ? (
           <div className="flex items-center justify-center h-40 text-gray-400">
             <p>No hay ventas registradas en este período</p>
           </div>
@@ -192,7 +306,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Top 5 Productos</h2>
-          {topProducts.length === 0 ? (
+          {loadingTopProducts ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-gray-100 animate-pulse" />
+                    <div className="space-y-1">
+                      <div className="h-4 w-32 rounded bg-gray-100 animate-pulse" />
+                      <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <div className="h-4 w-12 rounded bg-gray-100 animate-pulse" />
+                    <div className="h-3 w-20 rounded bg-gray-100 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : topProducts.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">Sin datos de ventas aún</p>
           ) : (
             <div className="space-y-3">
@@ -219,7 +351,25 @@ export default function DashboardPage() {
 
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 mb-4 font-display">Top 5 Clientes</h2>
-          {topClients.length === 0 ? (
+          {loadingTopClients ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-gray-100 animate-pulse" />
+                    <div className="space-y-1">
+                      <div className="h-4 w-32 rounded bg-gray-100 animate-pulse" />
+                      <div className="h-3 w-20 rounded bg-gray-100 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <div className="h-4 w-16 rounded bg-gray-100 animate-pulse" />
+                    <div className="h-3 w-12 rounded bg-gray-100 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : topClients.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">Sin clientes con compras aún</p>
           ) : (
             <div className="space-y-3">
@@ -248,46 +398,59 @@ export default function DashboardPage() {
       </div>
 
       {/* Actividades Pendientes */}
-      {pendingActivities && (
-        <Card className="mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 font-display flex items-center gap-2">
-              <ListTodo className="w-5 h-5 text-primary-500" /> Actividades Pendientes
-            </h2>
-            <span className="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full font-medium">
-              {pendingActivities.pendingTasks} tareas
-            </span>
-          </div>
-          {pendingActivities.todayAppointments.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">No hay actividades programadas para hoy</p>
-          ) : (
-            <div className="space-y-3">
-              {pendingActivities.todayAppointments.map((act) => (
-                <div key={act.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : act.status === 'PERDIDA' ? 'bg-red-400' : 'bg-green-400'}`} />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{act.subject}</p>
-                      <p className="text-xs text-gray-500">
-                        {act.client
-                          ? act.client.clientType === 'JURIDICO'
-                            ? act.client.companyName
-                            : `${act.client.firstName || ''} ${act.client.lastName || ''}`
-                          : 'Sin cliente'}
-                      </p>
-                    </div>
+      <Card className="mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 font-display flex items-center gap-2">
+            <ListTodo className="w-5 h-5 text-primary-500" /> Actividades Pendientes
+          </h2>
+          <span className="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full font-medium">
+            {loadingActivities ? '…' : `${pendingActivities?.pendingTasks ?? 0} tareas`}
+          </span>
+        </div>
+        {loadingActivities ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-gray-200" />
+                  <div className="space-y-1">
+                    <div className="h-4 w-36 rounded bg-gray-200" />
+                    <div className="h-3 w-28 rounded bg-gray-100" />
                   </div>
-                  {act.dueDate && (
-                    <span className="text-xs text-gray-400">
-                      {format(new Date(act.dueDate), 'HH:mm', { locale: es })}
-                    </span>
-                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
+                <span className="h-3 w-10 rounded bg-gray-100" />
+              </div>
+            ))}
+          </div>
+        ) : !pendingActivities || pendingActivities.todayAppointments.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-4">No hay actividades programadas para hoy</p>
+        ) : (
+          <div className="space-y-3">
+            {pendingActivities.todayAppointments.map((act) => (
+              <div key={act.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${act.status === 'PENDIENTE' ? 'bg-amber-400' : act.status === 'PERDIDA' ? 'bg-red-400' : 'bg-green-400'}`} />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{act.subject}</p>
+                    <p className="text-xs text-gray-500">
+                      {act.client
+                        ? act.client.clientType === 'JURIDICO'
+                          ? act.client.companyName
+                          : `${act.client.firstName || ''} ${act.client.lastName || ''}`
+                        : 'Sin cliente'}
+                    </p>
+                  </div>
+                </div>
+                {act.dueDate && (
+                  <span className="text-xs text-gray-400">
+                    {format(new Date(act.dueDate), 'HH:mm', { locale: es })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

@@ -24,6 +24,8 @@ export function NotificationDropdown({
 }: NotificationDropdownProps) {
   const navigate = useNavigate();
 
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+
   const getIcon = (type: Notification['type']) => {
     switch (type) {
       case 'VENTA_COMPLETADA':
@@ -51,7 +53,7 @@ export function NotificationDropdown({
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = safeNotifications.filter((n) => !n.isRead).length;
 
   return (
     <motion.div
@@ -78,7 +80,7 @@ export function NotificationDropdown({
               <CheckCheck className="w-4 h-4" />
             </button>
           )}
-          {notifications.some((n) => n.isRead) && (
+          {safeNotifications.some((n) => n.isRead) && (
             <button
               onClick={onDeleteAllRead}
               className="p-1 text-gray-400 hover:bg-gray-100 rounded"
@@ -98,13 +100,13 @@ export function NotificationDropdown({
       </div>
 
       <div className="max-h-96 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {safeNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <Bell className="w-12 h-12 mb-2 opacity-20" />
             <p className="text-sm">No tienes notificaciones</p>
           </div>
         ) : (
-          notifications.map((notification) => (
+          safeNotifications.map((notification) => (
             <div
               key={notification.id}
               className={`group relative p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
@@ -123,10 +125,25 @@ export function NotificationDropdown({
                   <p className="text-sm font-medium text-gray-900">{notification.title}</p>
                   <p className="text-sm text-gray-600 mt-0.5">{notification.message}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {formatDistanceToNow(new Date(notification.createdAt), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
+                    {(() => {
+                      const createdAtDate = notification.createdAt
+                        ? new Date(notification.createdAt)
+                        : null;
+
+                      if (!createdAtDate || Number.isNaN(createdAtDate.getTime())) {
+                        return 'Fecha desconocida';
+                      }
+
+                      try {
+                        return formatDistanceToNow(createdAtDate, {
+                          addSuffix: true,
+                          locale: es,
+                        });
+                      } catch (error) {
+                        console.error('Error formatting notification date', error);
+                        return 'Fecha desconocida';
+                      }
+                    })()}
                   </p>
                 </div>
 
@@ -160,7 +177,7 @@ export function NotificationDropdown({
         )}
       </div>
 
-      {notifications.length > 0 && (
+      {safeNotifications.length > 0 && (
         <div className="p-2 text-center border-t border-gray-100 bg-gray-50">
           <button
             onClick={() => {

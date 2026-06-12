@@ -2,6 +2,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { notificationsApi } from '../api/notifications.api';
 import type { Notification } from '../types';
 
+const ensureNotificationArray = (value: unknown): Notification[] => {
+  if (Array.isArray(value)) {
+    return value as Notification[];
+  }
+
+  if (value && typeof value === 'object') {
+    const data = (value as { data?: unknown; items?: unknown }).data;
+    const items = (value as { items?: unknown }).items;
+
+    if (Array.isArray(data)) {
+      return data as Notification[];
+    }
+
+    if (Array.isArray(items)) {
+      return items as Notification[];
+    }
+  }
+
+  return [];
+};
+
 export function useNotifications(pollingInterval = 30000) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -15,12 +36,20 @@ export function useNotifications(pollingInterval = 30000) {
         notificationsApi.getNotifications(20),
         notificationsApi.getUnreadCount(),
       ]);
-      setNotifications(notifs);
-      setUnreadCount(count);
+      setNotifications(ensureNotificationArray(notifs));
+      if (typeof count === 'number') {
+        setUnreadCount(count);
+      } else if (count && typeof count === 'object' && 'count' in count) {
+        const innerCount = (count as { count?: unknown }).count;
+        setUnreadCount(typeof innerCount === 'number' ? innerCount : 0);
+      } else {
+        setUnreadCount(0);
+      }
       setError(null);
     } catch (err) {
       console.error('Error loading notifications:', err);
       setError('Error al cargar notificaciones');
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -30,7 +59,12 @@ export function useNotifications(pollingInterval = 30000) {
   const loadUnreadCount = useCallback(async () => {
     try {
       const count = await notificationsApi.getUnreadCount();
-      setUnreadCount(count);
+      if (typeof count === 'number') {
+        setUnreadCount(count);
+      } else if (count && typeof count === 'object' && 'count' in count) {
+        const innerCount = (count as { count?: unknown }).count;
+        setUnreadCount(typeof innerCount === 'number' ? innerCount : 0);
+      }
     } catch (err) {
       console.error('Error loading unread count:', err);
     }
