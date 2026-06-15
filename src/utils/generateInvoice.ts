@@ -5,10 +5,15 @@ import {
   drawSectionLabel,
   drawInfoLine,
   drawInfoLineRight,
+  drawLabelValueLine,
   createItemsTable,
+  drawSummaryLine,
   drawTotalBox,
   drawFooter,
+  PDF_COLORS,
+  PDF_CONFIG,
 } from './pdfLayout';
+import { formatBs } from './currency';
 
 const EMPRESA_RIF = 'J-30999631-2';
 
@@ -36,6 +41,7 @@ export function generateInvoicePDF(sale: Sale): void {
   drawHeader(pdf, `FACTURA ${sale.saleNumber}`, dateStr);
 
   let yPos = 55;
+  const infoGap = 6;
   drawSectionLabel(pdf, yPos, 'DATOS DEL CLIENTE');
 
   pdf.setFontSize(8);
@@ -49,12 +55,9 @@ export function generateInvoicePDF(sale: Sale): void {
   drawInfoLine(pdf, yPos, 'Teléfono', sale.client.phone || '—');
 
   drawInfoLineRight(pdf, 65, 'Vendedor', `${sale.seller.firstName} ${sale.seller.lastName}`, 0);
-  drawInfoLineRight(pdf, 71, 'Método de pago', PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod, 0);
-  if (sale.paymentReference) {
-    drawInfoLineRight(pdf, 77, 'Referencia', sale.paymentReference, 0);
-  }
-
-  yPos += 10;
+  drawInfoLineRight(pdf, 71, 'RIF', EMPRESA_RIF, 0);
+  drawInfoLineRight(pdf, 77, 'Teléfono', sale.client.phone || '—', 0);
+  yPos += infoGap + 10;
 
   const tableBody = sale.items.map((item) => [
     item.product.name,
@@ -63,12 +66,72 @@ export function generateInvoicePDF(sale: Sale): void {
     `$${Number(item.unitPrice).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
     `$${Number(item.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
   ]);
-  yPos = createItemsTable(pdf, yPos, [['Producto', 'SKU', 'Cant.', 'P. Unit.', 'Subtotal']], tableBody) + 10;
+  yPos = createItemsTable(pdf, yPos, [['Producto', 'SKU', 'Cant.', 'P. Unit.', 'Subtotal']], tableBody) + 12;
+  
+  const formatAmount = (value: number) => `$${Number(value).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+  const exchangeRate = sale.usdToBsRateAtSale ?? 0;
+  const payments = sale.payments ?? [];
+  const paymentTotalUsd = payments.reduce((sum, payment) => sum + Number(payment.amountUsd), 0);
+  const paymentTotalBs = payments.reduce((sum, payment) => {
+    if (payment.currency === 'BS') return sum + Number(payment.amount);
+    if (exchangeRate > 0) {
+      return sum + Number(payment.amountUsd) * exchangeRate;
+    }
+    return sum;
+  }, 0);
+  const hasPaymentTotals = payments.length > 0 && paymentTotalUsd > 0;
+  
+  if (sale.payments && sale.payments.length > 0) {
+    drawSectionLabel(pdf, yPos, 'PAGOS');
+    yPos += 6;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('Monto', PDF_CONFIG.margin + PDF_CONFIG.contentWidth, yPos, { align: 'right' });
+    yPos += 6;
+    pdf.setTextColor(...PDF_COLORS.dark);
+    sale.payments.forEach((payment) => {
+      const label = `${PAYMENT_LABELS[payment.paymentMethod] || payment.paymentMethod}`;
+      const currencyLabel = payment.currency === 'USD' ? 'USD' : 'Bs.';
+      const amountDisplay = payment.currency === 'USD'
+        ? formatAmount(Number(payment.amount))
+        : `Bs. ${Number(payment.amount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+      const conversion = payment.currency === 'USD' || exchangeRate === 0
+        ? ''
+        : ` -> ${formatAmount(Number(payment.amount) / exchangeRate)}`;
+      drawLabelValueLine(
+        pdf,
+        yPos,
+        `${label} (${currencyLabel})`,
+        `${amountDisplay}${conversion}`
+      );
+      yPos += 6;
+      if (payment.reference) {
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...PDF_COLORS.grayText);
+        pdf.text(`Referencia: ${payment.reference}`, PDF_CONFIG.margin + 4, yPos);
+        yPos += 4;
+        pdf.setTextColor(...PDF_COLORS.dark);
+      }
+    });
+    yPos += 4;
+  }
 
   const isBs = sale.currency === 'BS';
-  const totalValue = isBs && sale.usdToBsRateAtSale
-    ? `Bs. ${(sale.total * sale.usdToBsRateAtSale).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
-    : `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+  const totalValue = isBs
+    ? (hasPaymentTotals && paymentTotalBs > 0
+      ? formatBs(paymentTotalBs)
+      : formatBs(Number(sale.total)))
+    : (hasPaymentTotals
+      ? formatAmount(paymentTotalUsd)
+      : formatAmount(Number(sale.total)));
+
+  if (Number(sale.tax) > 0) {
+    yPos += 5;
+    drawSummaryLine(pdf, yPos, 'IVA', formatAmount(Number(sale.tax)), PDF_COLORS.amber);
+    yPos += 6;
+  }
 
   drawTotalBox(pdf, yPos, isBs ? 'TOTAL Bs.' : 'TOTAL', totalValue);
 

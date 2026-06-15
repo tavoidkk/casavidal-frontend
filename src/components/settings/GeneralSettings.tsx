@@ -301,7 +301,7 @@ export default function GeneralSettings() {
             <input
               type="tel"
               value={form.companyPhone || ''}
-              onChange={(e) => handleInputChange('companyPhone', e.target.value)}
+              onChange={(e) => handleInputChange('companyPhone', e.target.value.replace(/[^0-9+\-() ]/g, ''))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="+56 9 1234 5678"
             />

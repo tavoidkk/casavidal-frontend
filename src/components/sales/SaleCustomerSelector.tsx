@@ -174,7 +174,7 @@ export function SaleCustomerSelector({
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value.replace(/[0-9]/g, '') })}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Nombre del cliente"
             />
@@ -182,9 +182,12 @@ export function SaleCustomerSelector({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
             <input
-              type="text"
+              type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) => {
+                const sanitized = e.target.value.replace(/[^0-9+\-() ]/g, '');
+                setFormData({ ...formData, phone: sanitized });
+              }}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
               placeholder="Teléfono"
             />

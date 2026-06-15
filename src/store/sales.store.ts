@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { settingsApi } from '../api/settings.api';
 
 export interface SaleItem {
   productId: string;
@@ -21,6 +22,13 @@ export interface SaleCustomer {
   loyaltyPoints?: number;
 }
 
+export interface DraftPayment {
+  paymentMethod: string;
+  currency: 'USD' | 'BS';
+  amount: number;
+  reference: string;
+}
+
 export interface DraftSale {
   id: string;
   customer: SaleCustomer | null;
@@ -37,6 +45,7 @@ export interface DraftSale {
   paymentMethod: string;
   currency: 'USD' | 'BS';
   paymentReference: string;
+  payments: DraftPayment[];
   notes: string;
   status: 'DRAFT' | 'HOLD';
   createdAt: string;
@@ -61,10 +70,14 @@ interface SalesState {
   setPointsRedeemed: (points: number, discount: number) => void;
   setSaleTaxRate: (value: number) => void;
   setSalePaymentMethod: (method: string) => void;
+  setSalePayments: (payments: DraftPayment[]) => void;
   setSaleCurrency: (currency: 'USD' | 'BS') => void;
   setPaymentReference: (ref: string) => void;
   setSaleNotes: (notes: string) => void;
   calculateSaleTotal: () => void;
+  taxRateSetting: number;
+  taxRateLoaded: boolean;
+  loadTaxRate: () => Promise<void>;
 
   // Gestión de borradores
   draftSales: DraftSale[];
@@ -80,7 +93,10 @@ interface SalesState {
 
 const generateId = () => `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-const createEmptySale = (): DraftSale => ({
+const DEFAULT_TAX_RATE_PERCENT = 16;
+const DEFAULT_TAX_RATE_DECIMAL = DEFAULT_TAX_RATE_PERCENT / 100;
+
+const createEmptySale = (taxRate: number = DEFAULT_TAX_RATE_DECIMAL): DraftSale => ({
   id: generateId(),
   customer: null,
   items: [],
@@ -90,12 +106,13 @@ const createEmptySale = (): DraftSale => ({
   discountType: 'PERCENTAGE',
   pointsRedeemed: 0,
   pointsDiscount: 0,
-  taxRate: 0.16,
+  taxRate,
   taxAmount: 0,
   total: 0,
   paymentMethod: 'EFECTIVO',
   currency: 'USD',
   paymentReference: '',
+  payments: [],
   notes: '',
   status: 'DRAFT',
   createdAt: new Date().toISOString(),
@@ -110,10 +127,35 @@ export const useSalesStore = create<SalesState>()(
       currentStep: 0,
       draftSales: [],
       isDirty: false,
+      taxRateSetting: DEFAULT_TAX_RATE_DECIMAL,
+      taxRateLoaded: false,
+      loadTaxRate: async () => {
+        try {
+          const settings = await settingsApi.getSettings();
+          const ratePercent = Number(settings.taxRate ?? DEFAULT_TAX_RATE_PERCENT);
+          const rateDecimal = Number.isFinite(ratePercent) ? ratePercent / 100 : DEFAULT_TAX_RATE_DECIMAL;
+          set((state) => {
+            const updatedSale = state.currentSale
+              ? { ...state.currentSale, taxRate: rateDecimal }
+              : null;
+            return {
+              taxRateSetting: rateDecimal,
+              taxRateLoaded: true,
+              currentSale: updatedSale,
+            };
+          });
+          if (get().currentSale) {
+            get().calculateSaleTotal();
+          }
+        } catch (error) {
+          console.error('Error cargando tasa de impuesto:', error);
+        }
+      },
 
       initNewSale: () => {
+        const taxRate = get().taxRateSetting || DEFAULT_TAX_RATE_DECIMAL;
         set({
-          currentSale: createEmptySale(),
+          currentSale: createEmptySale(taxRate),
           activeSaleId: null,
           currentStep: 0,
           isDirty: false,
@@ -248,6 +290,16 @@ export const useSalesStore = create<SalesState>()(
           if (!state.currentSale) return state;
           return {
             currentSale: { ...state.currentSale, paymentMethod: method },
+            isDirty: true,
+          };
+        });
+      },
+
+      setSalePayments: (payments) => {
+        set((state) => {
+          if (!state.currentSale) return state;
+          return {
+            currentSale: { ...state.currentSale, payments },
             isDirty: true,
           };
         });

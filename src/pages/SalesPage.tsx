@@ -29,6 +29,8 @@ export default function SalesPage() {
   const { user } = useAuthStore();
   const canCreate = user?.role === 'ADMIN' || user?.role === 'VENDEDOR';
   const loadRate = useCurrencyStore((s) => s.loadRate);
+  const loadTaxRate = useSalesStore((s) => s.loadTaxRate);
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
 
   const {
     currentSale,
@@ -49,6 +51,7 @@ export default function SalesPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const detailRate = selectedSale?.usdToBsRateAtSale || usdToBsRate;
 
   const loadSales = useCallback(async () => {
     setLoading(true);
@@ -76,7 +79,8 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadRate();
-  }, [loadRate]);
+    loadTaxRate();
+  }, [loadRate, loadTaxRate]);
 
   const handleNewSale = () => {
     initNewSale();
@@ -87,6 +91,15 @@ export default function SalesPage() {
     if (!currentSale) return;
 
     try {
+      const payments = currentSale.payments.length > 0
+        ? currentSale.payments.map((p) => ({
+            paymentMethod: p.paymentMethod as 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE',
+            currency: p.currency as 'USD' | 'BS',
+            amount: p.amount,
+            reference: p.reference || undefined,
+          }))
+        : undefined;
+
       const saleData = {
         clientId: currentSale.customer?.id || '',
         items: currentSale.items.map((item) => ({
@@ -95,7 +108,8 @@ export default function SalesPage() {
           unitPrice: item.unitPrice,
         })),
         discount: currentSale.discount,
-        paymentMethod: currentSale.paymentMethod as 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE',
+        paymentMethod: (payments?.[0]?.paymentMethod || currentSale.paymentMethod) as 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE',
+        payments,
         notes: currentSale.notes,
         freight: currentSale.freight,
         currency: currentSale.currency,
@@ -104,11 +118,6 @@ export default function SalesPage() {
       };
 
       const createdSale = await salesApi.create(saleData);
-
-      // Generar PDF
-      if (createdSale) {
-        generateInvoicePDF(createdSale);
-      }
 
       // Limpiar y redirigir
       clearCurrentSale();
@@ -270,9 +279,15 @@ export default function SalesPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
-                        {PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}
-                        {sale.currency === 'BS' && (
-                          <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                        {sale.payments && sale.payments.length > 1 ? (
+                          <span className="text-xs">{sale.payments.length} métodos</span>
+                        ) : (
+                          <>
+                            {PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}
+                            {sale.currency === 'BS' && (
+                              <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                            )}
+                          </>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -369,9 +384,15 @@ export default function SalesPage() {
               <div>
                 <p className="text-gray-500">Método de pago</p>
                 <p className="font-semibold">
-                  {PAYMENT_LABELS[selectedSale.paymentMethod]}
-                  {selectedSale.currency === 'BS' && (
-                    <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                  {selectedSale.payments && selectedSale.payments.length > 1 ? (
+                    <span>{selectedSale.payments.length} métodos</span>
+                  ) : (
+                    <>
+                      {PAYMENT_LABELS[selectedSale.paymentMethod]}
+                      {selectedSale.currency === 'BS' && (
+                        <span className="ml-1 text-xs text-primary-600 font-medium">(Bs)</span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>
@@ -383,7 +404,34 @@ export default function SalesPage() {
               </div>
             </div>
 
-            {selectedSale.paymentReference && (
+            {selectedSale.payments && selectedSale.payments.length > 0 && (
+              <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-2 text-sm">
+                <p className="font-semibold text-gray-700">Pagos</p>
+                {selectedSale.payments.map((p, i) => (
+                  <div key={p.id ?? `${p.paymentMethod}-${i}`} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {PAYMENT_LABELS[p.paymentMethod] || p.paymentMethod}
+                        <span className="ml-2 text-xs text-gray-500">{p.currency === 'USD' ? 'USD' : 'Bs.'}</span>
+                      </p>
+                      {p.reference && <p className="text-xs text-gray-500">Ref: {p.reference}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {p.currency === 'USD'
+                          ? `$${Number(p.amount).toFixed(2)}`
+                          : `Bs. ${Number(p.amount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`}
+                      </p>
+                      {detailRate && p.currency === 'BS' && (
+                        <p className="text-xs text-gray-500">≈ ${Number(p.amount / detailRate).toFixed(2)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedSale.paymentReference && !selectedSale.payments && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
                 <span className="text-blue-700 font-medium">Referencia: </span>
                 <span className="text-blue-600">{selectedSale.paymentReference}</span>
@@ -422,6 +470,12 @@ export default function SalesPage() {
                 <div className="flex justify-between text-green-600">
                   <span>Descuento</span>
                   <span>-{formatTotal(selectedSale.discount)}</span>
+                </div>
+              )}
+              {Number(selectedSale.tax) > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>IVA</span>
+                  <span>+{formatTotal(Number(selectedSale.tax))}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base border-t pt-1">

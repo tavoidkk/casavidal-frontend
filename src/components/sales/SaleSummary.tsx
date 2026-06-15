@@ -8,25 +8,13 @@ interface SaleSummaryProps {
   sale: DraftSale;
   onFreightChange: (value: number) => void;
   onDiscountChange: (value: number, type: 'PERCENTAGE' | 'FIXED') => void;
-  onPaymentMethodChange: (method: string) => void;
-  onNotesChange: (notes: string) => void;
   onPointsRedeemedChange?: (points: number) => void;
 }
-
-const PAYMENT_METHODS = [
-  { value: 'EFECTIVO', label: '💵 Efectivo' },
-  { value: 'TRANSFERENCIA', label: '🏦 Transferencia' },
-  { value: 'PUNTO_VENTA', label: '💳 P.V.' },
-  { value: 'PAGO_MOVIL', label: '📱 P. Móvil' },
-  { value: 'ZELLE', label: '💸 Zelle' },
-];
 
 export function SaleSummary({
   sale,
   onFreightChange,
   onDiscountChange,
-  onPaymentMethodChange,
-  onNotesChange,
   onPointsRedeemedChange,
 }: SaleSummaryProps) {
   const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
@@ -37,25 +25,13 @@ export function SaleSummary({
 
   const formatTotal = (amount: number) =>
     amount.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+  const taxRateLabel = new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(sale.taxRate * 100);
 
   return (
     <div className="space-y-4">
-      {/* Método de pago */}
-      <Card className="p-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Método de Pago</label>
-        <select
-          value={sale.paymentMethod}
-          onChange={(e) => onPaymentMethodChange(e.target.value)}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
-        >
-          {PAYMENT_METHODS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-      </Card>
-
       {/* Flete */}
       <Card className="p-4">
         <label className="block text-sm font-semibold text-gray-700 mb-2">Flete (Envío)</label>
@@ -103,7 +79,7 @@ export function SaleSummary({
       {sale.customer && availablePoints > 0 && (
         <Card className="p-4 border-amber-200">
           <label className="block text-sm font-semibold text-amber-700 mb-2 flex items-center gap-1">
-            <span>🎖️</span> Puntos de Lealtad
+            Puntos de Lealtad
           </label>
           <p className="text-xs text-gray-500 mb-2">
             Disponibles: <strong>{availablePoints} pts</strong> (máx. {maxRedeemable} pts = ${formatTotal(maxRedeemable * 0.10)})
@@ -129,7 +105,7 @@ export function SaleSummary({
                 onClick={() => onPointsRedeemedChange?.(0)}
                 disabled={sale.pointsRedeemed === 0}
               >
-                ✕
+                X
               </Button>
             </div>
           ) : (
@@ -142,18 +118,6 @@ export function SaleSummary({
           )}
         </Card>
       )}
-
-      {/* Notas */}
-      <Card className="p-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Notas</label>
-        <textarea
-          value={sale.notes}
-          onChange={(e) => onNotesChange(e.target.value)}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-sm"
-          rows={3}
-          placeholder="Observaciones o notas adicionales..."
-        />
-      </Card>
 
       {/* Resumen de totales */}
       <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
@@ -183,7 +147,7 @@ export function SaleSummary({
 
           {sale.pointsRedeemed > 0 && (
             <div className="flex justify-between text-amber-700 font-medium">
-              <span>🎖️ Descuento puntos ({sale.pointsRedeemed} pts)</span>
+              <span>Descuento puntos ({sale.pointsRedeemed} pts)</span>
               <span>-${formatTotal(sale.pointsDiscount)}</span>
             </div>
           )}
@@ -202,11 +166,10 @@ export function SaleSummary({
           </div>
 
           <div className="flex justify-between text-gray-700">
-            <span>IVA (16%)</span>
+            <span>IVA ({taxRateLabel}%)</span>
             <span>+${formatTotal(sale.taxAmount)}</span>
           </div>
 
-          {/* Total PRINCIPAL según moneda */}
           {isBs && usdToBsRate ? (
             <>
               <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base text-primary-700">

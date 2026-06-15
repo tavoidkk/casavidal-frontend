@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { Download, FileText, TrendingUp, Package, Users, Phone, ClipboardList, Truck, BarChart3, Target, Shield, LayoutDashboard } from 'lucide-react';
+import { Download, FileText, TrendingUp, Package, Users, Phone, ClipboardList, Truck, BarChart3, Target } from 'lucide-react';
 import { reportsApi } from '../api/reports.api';
 import { format } from 'date-fns';
 
@@ -33,8 +33,6 @@ function getColumnStyles(type: string): { styles: Record<number, { cellWidth: nu
     case 'clientes':
     case 'actividades':
     case 'pedidos-especiales':
-    case 'campanas':
-    case 'dashboard-ejecutivo':
       return def([85, 85]);
     default:
       return undefined;
@@ -249,9 +247,7 @@ const reportTabs: ReportTab[] = [
   { id: 'clientes', label: 'Clientes', icon: Users, group: 'Clientes' },
   { id: 'actividades', label: 'Actividad CRM', icon: Phone, group: 'Clientes' },
   { id: 'pedidos-especiales', label: 'Pedidos Esp.', icon: ClipboardList, group: 'Operaciones' },
-  { id: 'campanas', label: 'Campañas', icon: Shield, group: 'Operaciones' },
   { id: 'productividad', label: 'Productividad', icon: Users, group: 'Operaciones' },
-  { id: 'dashboard-ejecutivo', label: 'Dashboard Ejec.', icon: LayoutDashboard, group: 'Resumen' },
 ];
 
 function KpiCard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle?: string; color?: string }) {
@@ -381,17 +377,8 @@ export default function ReportsPage() {
       cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Comparativa del equipo') + 6;
     }
 
-    if (activeReport === 'dashboard-ejecutivo' && data.byPaymentMethod?.length > 0) {
-      cursorY = drawPieAsBars(doc, data.byPaymentMethod.map((p: any) => ({ name: p.method, value: Number(p.total) })), cx, cursorY, pageW, data.byPaymentMethod.length * 14, 'Ventas por metodo de pago') + 6;
-    }
-
     if (activeReport === 'proveedores' && data.byRating?.length > 0) {
       cursorY = drawPieAsBars(doc, data.byRating, cx, cursorY, pageW, data.byRating.length * 14, 'Distribucion por rating') + 6;
-    }
-
-    if (activeReport === 'campanas') {
-      if (data.byType?.length > 0) cursorY = drawPieAsBars(doc, data.byType, cx, cursorY, pageW, data.byType.length * 14, 'Por tipo') + 6;
-      if (data.byStatus?.length > 0) cursorY = drawPieAsBars(doc, data.byStatus, cx, cursorY, pageW, data.byStatus.length * 14, 'Por estado') + 6;
     }
 
     // --- Table ---
@@ -475,20 +462,10 @@ export default function ReportsPage() {
       if (rows.length === 0) rows.push(['(sin datos)', '0']);
       return [header, ...rows];
     }
-    if (tab === 'campanas') {
-      const header = ['Tipo', 'Cantidad'];
-      const src = data.byType || data.byStatus || [];
-      const rows = (src as any[]).map((s: any) => [s.name, String(s.count)]);
-      if (rows.length === 0) rows.push(['(sin datos)', '0']);
-      return [header, ...rows];
-    }
     if (tab === 'productividad' && data.users) {
       const header = ['Nombre', 'Rol', 'Actividades', 'Completadas', '%', 'Ventas', 'Total Ventas', 'Eventos'];
       const rows = data.users.map((u: any) => [u.name, u.role, String(u.activities), String(u.completedActivities), String(u.completionRate), String(u.sales), String(Number(u.salesTotal).toFixed(2)), String(u.events)]);
       return [header, ...rows];
-    }
-    if (tab === 'dashboard-ejecutivo') {
-      return [['Indicador', 'Valor'], ['Ventas Totales', String(Number(data.salesTotal).toFixed(2))], ['# Ventas', String(data.salesCount)], ['Ticket Prom.', String(Number(data.avgTicket).toFixed(2))], ['Clientes Activos', String(data.activeClients)], ['Clientes Nuevos', String(data.newClients)], ['Stock Bajo', String(data.lowStock)], ['Pedidos Pend.', String(data.pendingOrders)], ['Act. Pendientes', String(data.pendingActivities)], ['Act. Vencidas', String(data.overdueActivities)]];
     }
     return [];
   }
@@ -506,7 +483,7 @@ export default function ReportsPage() {
         <div className="p-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Reportes</h2>
         </div>
-        {['Ventas', 'Inventario', 'Clientes', 'Operaciones', 'Resumen'].map((group) => (
+        {['Ventas', 'Inventario', 'Clientes', 'Operaciones'].map((group) => (
           <div key={group}>
             <div className="px-4 pt-3 pb-1">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{group}</p>
@@ -576,9 +553,7 @@ export default function ReportsPage() {
             {activeReport === 'rentabilidad' && <RentabilidadReport data={data} />}
             {activeReport === 'proveedores' && <ProveedoresReport data={data} />}
             {activeReport === 'pedidos-especiales' && <PedidosEspecialesReport data={data} />}
-            {activeReport === 'campanas' && <CampanasReport data={data} />}
             {activeReport === 'productividad' && <ProductividadReport data={data} />}
-            {activeReport === 'dashboard-ejecutivo' && <DashboardEjecutivoReport data={data} />}
           </div>
         )}
       </div>
@@ -1016,48 +991,6 @@ function PedidosEspecialesReport({ data }: { data: any }) {
   );
 }
 
-function CampanasReport({ data }: { data: any }) {
-  return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <KpiCard title="Campañas" value={data.totalCampaigns} />
-        <KpiCard title="Enviados" value={data.totalSent} />
-        <KpiCard title="Aperturas" value={data.totalOpens} />
-        <KpiCard title="Clicks" value={data.totalClicks} />
-        <KpiCard title="Tasa Apertura" value={`${data.avgOpenRate}%`} color="text-green-500" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {data.byType?.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Por tipo</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={data.byType} cx="50%" cy="50%" outerRadius={80} dataKey="count" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {data.byType.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-        {data.byStatus?.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Por estado</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={data.byStatus} cx="50%" cy="50%" outerRadius={80} dataKey="count" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {data.byStatus.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
-
 function ProductividadReport({ data }: { data: any }) {
   return (
     <>
@@ -1117,32 +1050,4 @@ function ProductividadReport({ data }: { data: any }) {
   );
 }
 
-function DashboardEjecutivoReport({ data }: { data: any }) {
-  return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Ventas del Periodo" value={`$${Number(data.salesTotal).toLocaleString()}`} color="text-primary-600" />
-        <KpiCard title="Transacciones" value={data.salesCount} />
-        <KpiCard title="Ticket Promedio" value={`$${Number(data.avgTicket).toFixed(2)}`} />
-        <KpiCard title="Clientes Activos" value={data.activeClients} />
-        <KpiCard title="Clientes Nuevos" value={data.newClients} />
-        <KpiCard title="Stock Bajo" value={data.lowStock} color="text-orange-500" />
-        <KpiCard title="Pedidos Pendientes" value={data.pendingOrders} color="text-yellow-600" />
-        <KpiCard title="Act. Vencidas" value={data.overdueActivities} color="text-red-500" />
-      </div>
-      {data.byPaymentMethod?.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Ventas por metodo de pago</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={data.byPaymentMethod} cx="50%" cy="50%" outerRadius={100} dataKey="total" nameKey="method" label={({ method, percent }) => `${method} ${(percent * 100).toFixed(0)}%`}>
-                {data.byPaymentMethod.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </>
-  );
-}
+

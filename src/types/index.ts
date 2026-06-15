@@ -138,6 +138,15 @@ export interface SaleItem {
   subtotal: number;
 }
 
+export interface SalePayment {
+  id: string;
+  paymentMethod: PaymentMethod;
+  currency: 'USD' | 'BS';
+  amount: number;
+  amountUsd: number;
+  reference?: string | null;
+}
+
 export interface Sale {
   id: string;
   saleNumber: string;
@@ -166,6 +175,7 @@ export interface Sale {
   usdToBsRateAtSale?: number | null;
   notes?: string;
   items: SaleItem[];
+  payments?: SalePayment[];
   createdAt: string;
 }
 

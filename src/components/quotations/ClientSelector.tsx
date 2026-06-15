@@ -233,14 +233,14 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
             type="text"
             placeholder="Nombre *"
             value={newClient.firstName}
-            onChange={(e) => setNewClient({ ...newClient, firstName: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, firstName: e.target.value.replace(/[0-9]/g, '') })}
             className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
             type="text"
             placeholder="Apellido"
             value={newClient.lastName}
-            onChange={(e) => setNewClient({ ...newClient, lastName: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, lastName: e.target.value.replace(/[0-9]/g, '') })}
             className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input
@@ -254,7 +254,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelected
             type="tel"
             placeholder="Teléfono *"
             value={newClient.phone}
-            onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, phone: e.target.value.replace(/[^0-9+\-() ]/g, '') })}
             className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
           />
           <input

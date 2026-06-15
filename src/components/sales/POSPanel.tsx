@@ -1,9 +1,11 @@
 import { useMemo, useCallback, useState } from 'react';
+import { useCurrencyStore } from '../../store/currency.store';
 import { useSalesStore } from '../../store/sales.store';
 import { SaleCustomerSelector } from './SaleCustomerSelector';
 import { SaleProductSearch } from './SaleProductSearch';
 import { SaleItemsTable } from './SaleItemsTable';
 import { SaleSummary } from './SaleSummary';
+import { PaymentSplitter } from './PaymentSplitter';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import SalesSuggestions from './SalesSuggestions';
@@ -15,15 +17,15 @@ interface POSPanelProps {
   onHold?: () => void;
 }
 
-const BS_PAYMENT_METHODS = ['PAGO_MOVIL', 'TRANSFERENCIA', 'ZELLE'];
-
 export function POSPanel({
   customerInputRef,
   productInputRef,
   onSaveComplete,
   onHold,
 }: POSPanelProps) {
-  const [showPaymentRef, setShowPaymentRef] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
 
   const {
     currentSale,
@@ -33,10 +35,7 @@ export function POSPanel({
     updateSaleItemQuantity,
     setSaleFreight,
     setSaleDiscount,
-    setSalePaymentMethod,
-    setSaleCurrency,
-    setPaymentReference,
-    setSaleNotes,
+    setSalePayments,
     setPointsRedeemed,
   } = useSalesStore();
 
@@ -44,8 +43,6 @@ export function POSPanel({
     if (!currentSale) return false;
     return currentSale.customer !== null && currentSale.items.length > 0;
   }, [currentSale]);
-
-  const paymentMethod = currentSale?.paymentMethod;
 
   const handleAddProduct = (product: any, quantity: number) => {
     const item = {
@@ -72,25 +69,20 @@ export function POSPanel({
 
   const handleCobrarClick = () => {
     if (!currentSale) return;
-    if (BS_PAYMENT_METHODS.includes(currentSale.paymentMethod)) {
-      setSaleCurrency('BS');
-      setShowPaymentRef(true);
-    } else if (currentSale.paymentMethod === 'PUNTO_VENTA') {
-      setSaleCurrency('BS');
-      onSaveComplete?.();
-    } else {
-      setSaleCurrency('USD');
-      onSaveComplete?.();
+    if (currentSale.payments.length === 0) {
+      setSalePayments([{
+        paymentMethod: currentSale.paymentMethod,
+        currency: currentSale.currency,
+        amount: currentSale.total,
+        reference: currentSale.paymentReference,
+      }]);
     }
+    setShowPaymentConfirm(true);
   };
 
   const handleConfirmPayment = () => {
-    setShowPaymentRef(false);
+    setShowPaymentConfirm(false);
     onSaveComplete?.();
-  };
-
-  const handlePaymentRefChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPaymentReference(e.target.value);
   };
 
   if (!currentSale) {
@@ -130,13 +122,6 @@ export function POSPanel({
             sale={currentSale}
             onFreightChange={setSaleFreight}
             onDiscountChange={setSaleDiscount}
-            onPaymentMethodChange={(method) => {
-              setSalePaymentMethod(method);
-              if (!BS_PAYMENT_METHODS.includes(method) && method !== 'PUNTO_VENTA') {
-                setSaleCurrency('USD');
-              }
-            }}
-            onNotesChange={setSaleNotes}
             onPointsRedeemedChange={setPointsRedeemed}
           />
         </div>
@@ -147,6 +132,15 @@ export function POSPanel({
           onAddToCart={handleAddSuggestion}
         />
 
+        <div className="rounded-xl border border-gray-200 p-4">
+          <PaymentSplitter
+            total={currentSale.total}
+            currency={currentSale.currency}
+            payments={currentSale.payments}
+            onChange={setSalePayments}
+            usdToBsRate={usdToBsRate}
+          />
+        </div>
         <div className="flex flex-col gap-2">
           {onHold && (
             <Button variant="secondary" onClick={onHold} disabled={!canHoldOrSave}>
@@ -157,47 +151,35 @@ export function POSPanel({
             Cobrar
           </Button>
         </div>
-
-        {/* Moneda actual */}
-        <div className="text-center text-sm text-gray-500">
-          {currentSale.currency === 'BS' ? (
-            <span className="text-primary-700 font-medium">Venta en Bolívares</span>
-          ) : (
-            <span>Venta en USD</span>
-          )}
-        </div>
       </div>
 
-      {/* Modal de Referencia de Pago */}
+      {/* Modal de Confirmación de Pago */}
       <Modal
-        isOpen={showPaymentRef}
-        onClose={() => setShowPaymentRef(false)}
-        title="Referencia del Pago"
+        isOpen={showPaymentConfirm}
+        onClose={() => setShowPaymentConfirm(false)}
+        title="Confirmar Venta"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Ingresa el número de referencia o comprobante del pago por{' '}
-            <span className="font-semibold">
-              {paymentMethod === 'PAGO_MOVIL' && 'Pago Móvil'}
-              {paymentMethod === 'TRANSFERENCIA' && 'Transferencia'}
-              {paymentMethod === 'ZELLE' && 'Zelle'}
-            </span>
-            .
+            Se registrarán los siguientes pagos:
           </p>
-          <input
-            type="text"
-            value={currentSale.paymentReference}
-            onChange={handlePaymentRefChange}
-            placeholder="N° de referencia"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-            autoFocus
-          />
+          <div className="space-y-2">
+            {currentSale.payments.map((p, i) => (
+              <div key={i} className="flex justify-between text-sm bg-gray-50 p-2 rounded-lg">
+                <span>{p.paymentMethod} ({p.currency})</span>
+                <span className="font-medium">
+                  {p.currency === 'USD' ? `$${p.amount.toFixed(2)}` : `Bs. ${p.amount.toFixed(2)}`}
+                  {p.reference && <span className="text-xs text-gray-500 ml-1">- Ref: {p.reference}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
           <div className="flex gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowPaymentRef(false)} className="flex-1">
+            <Button variant="secondary" onClick={() => setShowPaymentConfirm(false)} className="flex-1">
               Cancelar
             </Button>
             <Button onClick={handleConfirmPayment} className="flex-1">
-              Confirmar
+              Confirmar y Cobrar
             </Button>
           </div>
         </div>

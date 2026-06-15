@@ -1,4 +1,6 @@
+import { useCurrencyStore } from '../../../store/currency.store';
 import { useSalesStore } from '../../../store/sales.store';
+import { PaymentSplitter } from '../PaymentSplitter';
 import { SaleSummary } from '../SaleSummary';
 
 export function PaymentStep() {
@@ -6,9 +8,9 @@ export function PaymentStep() {
     currentSale,
     setSaleFreight,
     setSaleDiscount,
-    setSalePaymentMethod,
-    setSaleNotes,
+    setSalePayments,
   } = useSalesStore();
+  const usdToBsRate = useCurrencyStore((s) => s.usdToBsRate);
 
   if (!currentSale) {
     return <div className="text-center py-12">Cargando venta...</div>;
@@ -17,14 +19,21 @@ export function PaymentStep() {
   return (
     <div>
       <h2 className="text-lg font-medium text-gray-900">Pago</h2>
-      <div className="mt-4">
+      <div className="mt-4 space-y-4">
         <SaleSummary
           sale={currentSale}
           onFreightChange={setSaleFreight}
           onDiscountChange={setSaleDiscount}
-          onPaymentMethodChange={setSalePaymentMethod}
-          onNotesChange={setSaleNotes}
         />
+        <div className="rounded-xl border border-gray-200 p-4">
+          <PaymentSplitter
+            total={currentSale.total}
+            currency={currentSale.currency}
+            payments={currentSale.payments}
+            onChange={setSalePayments}
+            usdToBsRate={usdToBsRate}
+          />
+        </div>
       </div>
     </div>
   );

@@ -318,6 +318,7 @@ export default function SuppliersPage() {
             </div>
             <Input
               label="Teléfono"
+              type="tel"
               value={form.phone || ''}
               onChange={(e) => setField('phone', e.target.value)}
               placeholder="0412-1234567"

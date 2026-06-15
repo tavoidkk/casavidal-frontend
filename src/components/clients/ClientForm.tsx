@@ -7,10 +7,12 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import type { Client } from '../../types';
 
+const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
+
 const clientSchema = z.object({
   clientType: z.enum(['NATURAL', 'JURIDICO']),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  firstName: z.string().regex(nameRegex, 'No se permiten números').optional(),
+  lastName: z.string().regex(nameRegex, 'No se permiten números').optional(),
   document: z.string().optional(),
   companyName: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
@@ -218,12 +220,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
             <Input
               label="Nombre"
               {...register('firstName')}
+              allowPattern={/[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/}
               error={errors.firstName?.message}
               placeholder="Juan"
             />
             <Input
               label="Apellido"
               {...register('lastName')}
+              allowPattern={/[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/}
               error={errors.lastName?.message}
               placeholder="Pérez"
             />
@@ -325,6 +329,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         />
         <Input
           label="Teléfono *"
+          type="tel"
           {...register('phone')}
           error={errors.phone?.message}
           placeholder="04241234567"

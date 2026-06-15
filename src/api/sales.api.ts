@@ -6,11 +6,19 @@ export interface CreateSaleItemInput {
   quantity: number;
 }
 
+export interface PaymentSplitInput {
+  paymentMethod: 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE';
+  currency: 'USD' | 'BS';
+  amount: number;
+  reference?: string;
+}
+
 export interface CreateSaleInput {
   clientId: string;
   items: CreateSaleItemInput[];
   discount?: number;
-  paymentMethod: 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE';
+  paymentMethod?: 'EFECTIVO' | 'TRANSFERENCIA' | 'PUNTO_VENTA' | 'PAGO_MOVIL' | 'ZELLE';
+  payments?: PaymentSplitInput[];
   notes?: string;
   freight?: number;
   currency?: 'USD' | 'BS';

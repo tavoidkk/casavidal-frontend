@@ -58,6 +58,30 @@ export function drawInfoLine(pdf: jsPDF, y: number, label: string, value: string
   pdf.text(`${label}: ${value}`, PDF_CONFIG.margin, y);
 }
 
+export function drawLabelValueLine(
+  pdf: jsPDF,
+  y: number,
+  label: string,
+  value: string,
+  options?: {
+    labelColor?: [number, number, number];
+    valueColor?: [number, number, number];
+    valueAlign?: 'right' | 'left' | 'center';
+  }
+): void {
+  const leftX = PDF_CONFIG.margin;
+  const rightX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
+
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+
+  pdf.setTextColor(...(options?.labelColor ?? PDF_COLORS.dark));
+  pdf.text(label, leftX, y);
+
+  pdf.setTextColor(...(options?.valueColor ?? PDF_COLORS.dark));
+  pdf.text(value, rightX, y, { align: options?.valueAlign ?? 'right' });
+}
+
 export function drawInfoLineRight(pdf: jsPDF, y: number, label: string, value: string, xOffset?: number): void {
   const x = (xOffset ?? 0) + 130;
   pdf.setFontSize(9);

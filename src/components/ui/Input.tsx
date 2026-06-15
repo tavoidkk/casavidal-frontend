@@ -4,10 +4,32 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   placeholder?: string;
+  allowPattern?: RegExp;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', onChange, allowPattern, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (allowPattern || e.target.type === 'tel') {
+        const cursor = e.target.selectionStart;
+        let sanitized = e.target.value;
+
+        if (e.target.type === 'tel') {
+          sanitized = sanitized.replace(/[^0-9+\-() ]/g, '');
+        }
+        if (allowPattern) {
+          sanitized = sanitized.split('').filter((c) => allowPattern.test(c)).join('');
+        }
+
+        if (sanitized !== e.target.value) {
+          e.target.value = sanitized;
+          try { e.target.setSelectionRange(cursor, cursor); } catch {}
+        }
+      }
+
+      onChange?.(e);
+    };
+
     return (
       <div className="w-full">
         {label && (
@@ -24,6 +46,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ${error ? 'border-red-400' : 'border-gray-200'}
             ${className}
           `}
+          onChange={handleChange}
           {...props}
         />
         {error && (
