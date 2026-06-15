@@ -6,8 +6,7 @@ import { QuotationContainer } from '../components/quotations/QuotationContainer'
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
-import { generateInvoicePDF } from '../utils/generateInvoice';
-import type { Sale } from '../types';
+import { generateQuotationPDF } from '../utils/generateQuotationPDF';
 import { staggerContainer, staggerItem } from '../utils/motion';
 
 export default function QuotationsPage() {
@@ -34,48 +33,21 @@ export default function QuotationsPage() {
   };
 
   const handleGeneratePDF = (quotation: SavedQuotation) => {
-    // Convertir SavedQuotation a formato compatible con generateInvoicePDF
-    const saleData: Sale = {
-      id: quotation.id,
-      saleNumber: quotation.number,
-      clientId: quotation.selectedClient.id,
-      client: {
-        id: quotation.selectedClient.id,
-        firstName: quotation.selectedClient.name.split(' ')[0] || '',
-        lastName: quotation.selectedClient.name.split(' ').slice(1).join(' ') || '',
-        phone: quotation.selectedClient.phone || '',
-        clientType: 'NATURAL',
-      },
-      seller: {
-        id: 'system',
-        firstName: 'CasaVidal',
-        lastName: 'System',
-      },
-      sellerId: 'system',
-      items: quotation.items.map((item) => ({
-        id: item.id,
-        productId: item.productId,
-        product: {
-          id: item.productId,
-          name: item.productName,
-          sku: item.productCode,
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-      })) as any,
-      subtotal: quotation.subtotal,
-      tax: quotation.taxAmount,
-      discount: quotation.discountAmount,
-      total: quotation.total,
-      paymentMethod: 'EFECTIVO',
-      currency: 'USD',
-      notes: undefined,
-      createdAt: quotation.createdAt,
-    };
-
     try {
-      generateInvoicePDF(saleData);
+      generateQuotationPDF({
+        number: quotation.number,
+        clientName: quotation.selectedClient.name,
+        clientPhone: quotation.selectedClient.phone,
+        clientEmail: quotation.selectedClient.email,
+        items: quotation.items,
+        subtotal: quotation.subtotal,
+        freight: quotation.freight,
+        taxRate: quotation.taxRate,
+        taxAmount: quotation.taxAmount,
+        discountAmount: quotation.discountAmount,
+        total: quotation.total,
+        createdAt: quotation.createdAt,
+      });
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error al generar PDF');

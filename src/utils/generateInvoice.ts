@@ -1,8 +1,15 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Sale } from '../types';
+import {
+  createPDFDocument,
+  drawHeader,
+  drawSectionLabel,
+  drawInfoLine,
+  drawInfoLineRight,
+  createItemsTable,
+  drawTotalBox,
+  drawFooter,
+} from './pdfLayout';
 
-const EMPRESA_NOMBRE = 'CASAVIDAL C.A.';
 const EMPRESA_RIF = 'J-30999631-2';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -19,127 +26,70 @@ function getClientName(sale: Sale): string {
 }
 
 export function generateInvoicePDF(sale: Sale): void {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pdf = createPDFDocument();
 
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
-
-  // ── Encabezado ──
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text(EMPRESA_NOMBRE, margin, 20);
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`RIF: ${EMPRESA_RIF}`, margin, 27);
-
-  // Número y fecha (derecha)
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FACTURA', pageW - margin, 20, { align: 'right' });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`N°: ${sale.saleNumber}`, pageW - margin, 27, { align: 'right' });
-  const fechaStr = new Date(sale.createdAt).toLocaleString('es-VE', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
+  const dateStr = new Date(sale.createdAt).toLocaleDateString('es-VE', {
+    year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
-  doc.text(`Fecha: ${fechaStr}`, pageW - margin, 33, { align: 'right' });
 
-  // Línea divisoria
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, 38, pageW - margin, 38);
+  drawHeader(pdf, `FACTURA ${sale.saleNumber}`, dateStr);
 
-  // ── Datos del cliente ──
-  let y = 45;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CLIENTE', margin, y);
-  doc.setFont('helvetica', 'normal');
-  y += 6;
-  doc.text(`Nombre: ${getClientName(sale)}`, margin, y);
-  y += 5;
-  doc.text(`Teléfono: ${sale.client.phone || '—'}`, margin, y);
+  let yPos = 55;
+  drawSectionLabel(pdf, yPos, 'DATOS DEL CLIENTE');
 
-  // Vendedor (derecha)
-  doc.setFont('helvetica', 'bold');
-  doc.text('VENDEDOR', pageW / 2 + 10, 45);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${sale.seller.firstName} ${sale.seller.lastName}`, pageW / 2 + 10, 51);
-  doc.text(`Método de pago: ${PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}`, pageW / 2 + 10, 56);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(100, 116, 139);
+  pdf.text(`RIF: ${EMPRESA_RIF}`, 130, yPos);
+
+  yPos += 10;
+  drawInfoLine(pdf, yPos, 'Nombre', getClientName(sale));
+  yPos += 5;
+  drawInfoLine(pdf, yPos, 'Teléfono', sale.client.phone || '—');
+
+  drawInfoLineRight(pdf, 65, 'Vendedor', `${sale.seller.firstName} ${sale.seller.lastName}`, 0);
+  drawInfoLineRight(pdf, 71, 'Método de pago', PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod, 0);
   if (sale.paymentReference) {
-    doc.text(`Referencia: ${sale.paymentReference}`, pageW / 2 + 10, 61);
+    drawInfoLineRight(pdf, 77, 'Referencia', sale.paymentReference, 0);
   }
 
-  y += 10;
+  yPos += 10;
 
-  // ── Tabla de ítems ──
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [['Producto', 'SKU', 'Cant.', 'P. Unit.', 'Subtotal']],
-    body: sale.items.map((item) => [
-      item.product.name,
-      item.product.sku,
-      `${item.quantity} ${item.product.unit || ''}`.trim(),
-      `$${Number(item.unitPrice).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-      `$${Number(item.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
-    ]),
-    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-    bodyStyles: { fontSize: 9 },
-    columnStyles: {
-      0: { cellWidth: 'auto' },
-      1: { cellWidth: 28 },
-      2: { cellWidth: 22, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 32, halign: 'right' },
-    },
-    alternateRowStyles: { fillColor: [245, 247, 250] },
-  });
-
-  // ── Total ──
-  const finalY = (doc as any).lastAutoTable.finalY + 6;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(pageW - margin - 70, finalY, pageW - margin, finalY);
+  const tableBody = sale.items.map((item) => [
+    item.product.name,
+    item.product.sku,
+    `${item.quantity} ${item.product.unit || ''}`.trim(),
+    `$${Number(item.unitPrice).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
+    `$${Number(item.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
+  ]);
+  yPos = createItemsTable(pdf, yPos, [['Producto', 'SKU', 'Cant.', 'P. Unit.', 'Subtotal']], tableBody) + 10;
 
   const isBs = sale.currency === 'BS';
-  const totalLabel = isBs ? 'TOTAL Bs.' : 'TOTAL';
   const totalValue = isBs && sale.usdToBsRateAtSale
     ? `Bs. ${(sale.total * sale.usdToBsRateAtSale).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
     : `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(totalLabel, pageW - margin - 70, finalY + 8);
-  doc.text(totalValue, pageW - margin, finalY + 8, { align: 'right' });
+  drawTotalBox(pdf, yPos, isBs ? 'TOTAL Bs.' : 'TOTAL', totalValue);
 
   if (isBs && sale.usdToBsRateAtSale) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
+    yPos += 10;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
     const usdRef = `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })} (tasa ${sale.usdToBsRateAtSale})`;
-    doc.text(`USD ref: ${usdRef}`, pageW - margin, finalY + 15, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
+    pdf.text(`USD ref: ${usdRef}`, 130, yPos);
   }
 
-  // Notas
-  const notesY = isBs && sale.usdToBsRateAtSale ? finalY + 22 : finalY + 14;
+  const notesY = isBs && sale.usdToBsRateAtSale ? yPos + 8 : yPos + 6;
   if (sale.notes) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    doc.text(`Notas: ${sale.notes}`, margin, notesY);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Notas: ${sale.notes}`, 15, notesY);
   }
 
-  // ── Pie ──
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(150, 150, 150);
-  doc.text(
-    'Este documento es una factura de control interno.',
-    pageW / 2,
-    doc.internal.pageSize.getHeight() - 10,
-    { align: 'center' }
-  );
+  drawFooter(pdf, 'Este documento es una factura de control interno.');
 
-  doc.save(`Factura-${sale.saleNumber}.pdf`);
+  pdf.save(`Factura-${sale.saleNumber}.pdf`);
 }
