@@ -128,11 +128,11 @@ export function createItemsTable(pdf: jsPDF, startY: number, head: string[][], b
       fillColor: PDF_COLORS.primary,
       textColor: PDF_COLORS.white,
       fontStyle: 'bold',
-      fontSize: 10,
+      fontSize: 11,
       cellPadding: 5,
     },
     bodyStyles: {
-      fontSize: 9,
+      fontSize: 10,
       cellPadding: 4,
     },
     alternateRowStyles: {
@@ -213,12 +213,12 @@ export function drawInfoCard(
   pdf.rect(leftX, startY, PDF_CONFIG.contentWidth, headerH, 'F');
 
   pdf.setTextColor(...PDF_COLORS.primaryDark);
-  pdf.setFontSize(9);
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
   pdf.text(title, leftX + 3, startY + 6.5);
 
   if (rightHeader) {
-    pdf.setFontSize(7);
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...PDF_COLORS.grayText);
     pdf.text(rightHeader, rightX - 3, startY + 6.5, { align: 'right' });
@@ -229,7 +229,7 @@ export function drawInfoCard(
 
   items.forEach((item, i) => {
     const iy = startY + headerH + padY + i * rowH;
-    pdf.setFontSize(8);
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...PDF_COLORS.grayText);
     pdf.text(item.label, leftX + 4, iy + 4);
@@ -265,7 +265,7 @@ export function drawKpiRow(
     pdf.setTextColor(...(card.valueColor ?? PDF_COLORS.primary));
     pdf.text(card.value, cx + cardW / 2, y + 10, { align: 'center' });
 
-    pdf.setFontSize(7);
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...PDF_COLORS.grayText);
     pdf.text(card.label, cx + cardW / 2, y + 16, { align: 'center' });
@@ -291,22 +291,22 @@ export function drawSectionNote(
   const rightX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
 
   pdf.setFillColor(...(accentColor ? (accentColor === PDF_COLORS.red ? PDF_COLORS.redLight : PDF_COLORS.greenLight) : PDF_COLORS.primaryLight));
-  pdf.rect(leftX, y - 4, PDF_CONFIG.contentWidth, 10, 'F');
+  pdf.rect(leftX, y - 5, PDF_CONFIG.contentWidth, 11, 'F');
 
   pdf.setTextColor(...(accentColor ?? PDF_COLORS.primaryDark));
-  pdf.setFontSize(9);
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
   pdf.text(title, leftX + 3, y + 1);
 
   const lines = pdf.splitTextToSize(body, PDF_CONFIG.contentWidth - 6);
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(...PDF_COLORS.grayText);
   lines.forEach((line: string, i: number) => {
-    pdf.text(line, leftX + 3, y + 11 + i * 4);
+    pdf.text(line, leftX + 3, y + 12 + i * 4.5);
   });
 
-  return y + 12 + lines.length * 4;
+  return y + 13 + lines.length * 4.5;
 }
 
 export function drawFooter(pdf: jsPDF, text: string): void {

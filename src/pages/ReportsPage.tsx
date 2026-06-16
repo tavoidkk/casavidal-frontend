@@ -169,14 +169,14 @@ function drawBarChart(doc: jsPDF, items: { label: string; values: { name: string
   const chartY = y + marginT;
   const barW = chartW;
 
-  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
+  if (title) { doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
 
   const maxVal = Math.max(...items.flatMap((i) => i.values.map((v) => v.value)));
   const roundedMax = Math.ceil(maxVal * 1.1 / (10 ** Math.floor(Math.log10(maxVal || 1)))) * (10 ** Math.floor(Math.log10(maxVal || 1))) || 1;
   const gridSteps = 4;
 
   doc.setDrawColor(220, 220, 220);
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
   for (let i = 0; i <= gridSteps; i++) {
@@ -200,21 +200,21 @@ function drawBarChart(doc: jsPDF, items: { label: string; values: { name: string
       doc.setFillColor(parseInt(val.color.slice(1, 3), 16), parseInt(val.color.slice(3, 5), 16), parseInt(val.color.slice(5, 7), 16));
       doc.rect(bx, by, Math.max(4, barItemW), barHeight, 'F');
       if (barHeight > 10) {
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 255, 255);
-        doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by + 4, { align: 'center' });
+        doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by + 4.5, { align: 'center' });
       } else {
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by - 3, { align: 'center' });
       }
     });
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
-    const label = item.label.length > 14 ? item.label.slice(0, 13) + '…' : item.label;
+    const label = item.label.length > 14 ? item.label.slice(0, 13) + '...' : item.label;
     doc.text(label, gx + groupWidth / 2, chartY + chartH + 10, { align: 'center' });
   });
 
@@ -224,7 +224,7 @@ function drawBarChart(doc: jsPDF, items: { label: string; values: { name: string
       const lx = x + 10 + si * 60;
       doc.setFillColor(parseInt(val.color.slice(1, 3), 16), parseInt(val.color.slice(3, 5), 16), parseInt(val.color.slice(5, 7), 16));
       doc.rect(lx, legendY, 10, 4, 'F');
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
       doc.text(val.name, lx + 12, legendY + 4);
@@ -245,14 +245,14 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
   const chartX = x + marginL;
   const chartY = y + marginT;
 
-  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
+  if (title) { doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
 
   const maxVal = Math.max(...points.flatMap((p) => p.values.map((v) => v.value)));
   const roundedMax = Math.ceil(maxVal * 1.1 / (10 ** Math.floor(Math.log10(maxVal || 1)))) * (10 ** Math.floor(Math.log10(maxVal || 1))) || 1;
   const gridSteps = 4;
 
   doc.setDrawColor(220, 220, 220);
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
   for (let i = 0; i <= gridSteps; i++) {
@@ -282,7 +282,7 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
     pts.forEach((pt) => {
       doc.setFillColor(parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16));
       doc.circle(pt.px, pt.py, 2, 'F');
-      doc.setFontSize(7);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(80, 80, 80);
       doc.text(fmtVal(pt.val), pt.px, pt.py - 4, { align: 'center' });
@@ -291,10 +291,10 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
     const step = Math.max(1, Math.floor(points.length / 12));
     points.forEach((p, i) => {
       if (i % step === 0 || i === points.length - 1) {
-        doc.setFontSize(8);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        const label = p.label.length > 10 ? p.label.slice(0, 9) + '…' : p.label;
+        const label = p.label.length > 10 ? p.label.slice(0, 9) + '...' : p.label;
         doc.text(label, chartX + i * (chartW / Math.max(1, points.length - 1)), chartY + chartH + 10, { align: 'center' });
       }
     });
@@ -306,7 +306,7 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
       const lx = x + 10 + si * 50;
       doc.setFillColor(parseInt(seriesColors[si % seriesColors.length]!.slice(1, 3), 16), parseInt(seriesColors[si % seriesColors.length]!.slice(3, 5), 16), parseInt(seriesColors[si % seriesColors.length]!.slice(5, 7), 16));
       doc.rect(lx, legendY, 10, 4, 'F');
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
       doc.text(name, lx + 12, legendY + 4);
@@ -319,7 +319,7 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
 
 function drawPieAsBars(doc: jsPDF, items: { name: string; value: number }[], x: number, y: number, w: number, h: number, title?: string) {
   if (!items.length) return y;
-  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, x + w / 2, y + 5, { align: 'center' }); y += 10; }
+  if (title) { doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, x + w / 2, y + 5, { align: 'center' }); y += 10; }
   const total = items.reduce((s, i) => s + i.value, 0);
   if (!total) return y + 10;
   const barH = 12;
@@ -332,17 +332,17 @@ function drawPieAsBars(doc: jsPDF, items: { name: string; value: number }[], x: 
     const pct = ((item.value / total) * 100).toFixed(1);
     const bw = (item.value / maxVal) * barMaxW;
 
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    const label = item.name.length > 20 ? item.name.slice(0, 19) + '…' : item.name;
+    const label = item.name.length > 20 ? item.name.slice(0, 19) + '...' : item.name;
     doc.text(label, x, by + 8);
 
     doc.setFillColor(parseInt(COLORS[idx % COLORS.length]!.slice(1, 3), 16), parseInt(COLORS[idx % COLORS.length]!.slice(3, 5), 16), parseInt(COLORS[idx % COLORS.length]!.slice(5, 7), 16));
     doc.rect(x + labelW, by, Math.max(3, bw), barH, 'F');
 
     const valText = `${fmtVal(item.value)} (${pct}%)`;
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     if (bw > 45) {
       doc.setTextColor(255, 255, 255);
@@ -382,15 +382,15 @@ function drawChartCard(
   const chartEndY = drawContent(doc, x, bodyY, w, chartBodyH);
 
   const insightLines = insight ? doc.splitTextToSize(insight, w - 8) : [];
-  const insightH = insightLines.length > 0 ? insightLines.length * 4 + 8 : 0;
+  const insightH = insightLines.length > 0 ? insightLines.length * 4.5 + 8 : 0;
 
   if (insightLines.length > 0) {
     const insightY = chartEndY + 4;
     doc.setTextColor(...PDF_COLORS.grayText);
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
     insightLines.forEach((line: string, i: number) => {
-      doc.text(line, x + 4, insightY + 4 + i * 4);
+      doc.text(line, x + 4, insightY + 4 + i * 4.5);
     });
   }
 
@@ -399,14 +399,14 @@ function drawChartCard(
   if (assessment) {
     const ay = y + totalH + 2;
     const assessLines = doc.splitTextToSize(assessment.text, w - 16);
-    const assessH = assessLines.length * 4 + 6;
+    const assessH = assessLines.length * 4.5 + 6;
     doc.setFillColor(...assessment.color);
-    doc.rect(x + 4, ay, 3, 3, 'F');
+    doc.rect(x + 4, ay, 4, 4, 'F');
     doc.setTextColor(...assessment.color);
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     assessLines.forEach((line: string, i: number) => {
-      doc.text(line, x + 10, ay + 3 + i * 4);
+      doc.text(line, x + 11, ay + 3.5 + i * 4.5);
     });
     totalH += assessH;
   }
@@ -701,7 +701,7 @@ export default function ReportsPage() {
 
     let cursorY = PDF_CONFIG.headerHeight + 10;
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...PDF_COLORS.grayText);
     if (dateFrom || dateTo) {
@@ -712,13 +712,13 @@ export default function ReportsPage() {
 
     const summaryText = buildSummaryText(data, activeReport);
     if (summaryText) {
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...PDF_COLORS.grayText);
       const lines = doc.splitTextToSize(summaryText, PDF_CONFIG.contentWidth);
       lines.forEach((line: string) => {
         doc.text(line, PDF_CONFIG.margin, cursorY);
-        cursorY += 4;
+        cursorY += 4.5;
       });
       cursorY += 3;
     }
@@ -869,7 +869,7 @@ export default function ReportsPage() {
       const columnStyles = colCfg?.styles;
       const tableWidth = colCfg?.tableWidth;
       const startY = Math.min(cursorY, doc.internal.pageSize.height - 30);
-      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [...PDF_COLORS.primary], textColor: [...PDF_COLORS.white], fontStyle: 'bold', fontSize: 9, cellPadding: 2.5 }, alternateRowStyles: { fillColor: [...PDF_COLORS.primaryLight] }, margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }, columnStyles };
+      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 9, cellPadding: 2 }, headStyles: { fillColor: [...PDF_COLORS.primary], textColor: [...PDF_COLORS.white], fontStyle: 'bold', fontSize: 10, cellPadding: 2.5 }, alternateRowStyles: { fillColor: [...PDF_COLORS.primaryLight] }, margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }, columnStyles };
       if (tableWidth) opts.tableWidth = tableWidth;
       if (startY + rows.length * 5 > doc.internal.pageSize.height - 20) {
         doc.addPage();
