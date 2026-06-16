@@ -2,11 +2,11 @@ import type { QuotationItem } from '../api/quotations.api';
 import {
   createPDFDocument,
   drawHeader,
-  drawSectionLabel,
-  drawInfoLine,
+  drawInfoCard,
   createItemsTable,
   drawSummaryLine,
   drawTotalBox,
+  drawDividerLine,
   drawFooter,
 } from './pdfLayout';
 
@@ -38,18 +38,16 @@ export function generateQuotationPDF(data: QuotationPDFData): void {
   drawHeader(pdf, `COTIZACIÓN ${cotNumber}`, dateStr, data.logoBase64);
 
   let yPos = 55;
-  drawSectionLabel(pdf, yPos, 'DATOS DEL CLIENTE');
 
-  yPos += 10;
-  drawInfoLine(pdf, yPos, 'Nombre', data.clientName || 'No especificado');
-  yPos += 5;
-  drawInfoLine(pdf, yPos, 'Teléfono', data.clientPhone || 'No especificado');
-  yPos += 5;
+  const clientItems: { label: string; value: string }[] = [
+    { label: 'Nombre', value: data.clientName || 'No especificado' },
+    { label: 'Teléfono', value: data.clientPhone || 'No especificado' },
+  ];
   if (data.clientEmail) {
-    drawInfoLine(pdf, yPos, 'Email', data.clientEmail);
-    yPos += 5;
+    clientItems.push({ label: 'Email', value: data.clientEmail });
   }
-  yPos += 5;
+  yPos = drawInfoCard(pdf, yPos, 'DATOS DEL CLIENTE', clientItems);
+  drawDividerLine(pdf, yPos - 3);
 
   const tableBody = data.items.map((item) => [
     item.productName,

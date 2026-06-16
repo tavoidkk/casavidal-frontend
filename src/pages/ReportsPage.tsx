@@ -6,28 +6,28 @@ import * as XLSX from 'xlsx';
 import { Download, FileText, TrendingUp, Package, Users, Phone, ClipboardList, Truck, BarChart3, Target } from 'lucide-react';
 import { reportsApi } from '../api/reports.api';
 import { format } from 'date-fns';
-import { drawHeader, drawFooter, PDF_CONFIG, PDF_COLORS } from '../utils/pdfLayout';
+import { drawHeader, drawFooter, drawKpiRow, drawDividerLine, PDF_CONFIG, PDF_COLORS } from '../utils/pdfLayout';
 import { getLogoBase64 } from '../utils/pdfLogo';
 
 const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#0ea5e9', '#84cc16'];
 const CHART_HEIGHT = 350;
 
-function getColumnStyles(type: string): { styles: Record<number, { cellWidth: number }>; tableWidth: number } | undefined {
-  const padPerCol = 2;
-  const available = 190;
+function getColumnStyles(type: string): { styles: Record<number, { cellWidth: number; halign?: string; fillColor?: number[] }>; tableWidth: number } | undefined {
   const def = (widths: number[]) => {
     const total = widths.reduce((s, w) => s + w, 0);
-    return { styles: Object.fromEntries(widths.map((w, i) => [i, { cellWidth: w }])), tableWidth: total };
+    const styles: Record<number, { cellWidth: number; halign?: string; fillColor?: number[] }> = Object.fromEntries(widths.map((w, i) => [i, { cellWidth: w }]));
+    styles[0] = { ...styles[0], halign: 'right', fillColor: [245, 245, 250] };
+    return { styles, tableWidth: total };
   };
   switch (type) {
     case 'rentabilidad':
       return def([54, 34, 22, 22, 22, 22]);
     case 'ventas':
-      return def([7, 18, 35, 25, 23, 17, 15, 18]);
+      return def([11, 17, 33, 23, 21, 16, 15, 18]);
     case 'inventario':
       return def([42, 28, 34, 34, 36]);
     case 'top-productos':
-      return def([7, 38, 22, 24, 17, 27, 27]);
+      return def([11, 37, 20, 24, 16, 27, 27]);
     case 'proveedores':
       return def([44, 17, 45, 28, 36]);
     case 'productividad':
@@ -45,27 +45,139 @@ function fmtVal(v: number): string {
   return v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v * 10) / 10);
 }
 
+function fmtLarge(v: number | string): string {
+  const n = Number(v);
+  return n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString();
+}
+
+function buildKpiCards(data: any, type: string): { value: string; label: string; valueColor?: [number, number, number] }[] {
+  switch (type) {
+    case 'ventas':
+      return [
+        { value: `$${fmtLarge(data.totalRevenue)}`, label: 'Total Ventas', valueColor: PDF_COLORS.primary },
+        { value: String(data.totalSales ?? 0), label: 'Transacciones' },
+        { value: `$${Number(data.avgTicket ?? 0).toFixed(2)}`, label: 'Ticket Promedio', valueColor: PDF_COLORS.green },
+        { value: `$${Number(data.totalDiscount ?? 0).toFixed(2)}`, label: 'Descuentos', valueColor: PDF_COLORS.amber },
+      ];
+    case 'inventario':
+      return [
+        { value: String(data.totalProducts ?? 0), label: 'Total Productos', valueColor: PDF_COLORS.primary },
+        { value: `$${fmtLarge(data.totalStockValue)}`, label: 'Valor Inventario', valueColor: PDF_COLORS.green },
+        { value: String(data.lowStockCount ?? 0), label: 'Stock Bajo', valueColor: PDF_COLORS.amber },
+        { value: String(data.outOfStockCount ?? 0), label: 'Sin Stock', valueColor: [239, 68, 68] },
+      ];
+    case 'clientes':
+      return [
+        { value: String(data.totalClients ?? 0), label: 'Total Clientes', valueColor: PDF_COLORS.primary },
+        { value: `$${Number(data.avgLifetimeValue ?? 0).toFixed(2)}`, label: 'LTV Promedio', valueColor: PDF_COLORS.green },
+        { value: String(data.highChurnClients ?? 0), label: 'Alto Riesgo', valueColor: [239, 68, 68] },
+      ];
+    case 'actividades':
+      return [
+        { value: String(data.total ?? 0), label: 'Total Actividades', valueColor: PDF_COLORS.primary },
+        { value: String(data.overdue ?? 0), label: 'Vencidas', valueColor: [239, 68, 68] },
+      ];
+    case 'top-productos':
+      return [
+        { value: String(data.products?.length ?? 0), label: 'Productos', valueColor: PDF_COLORS.primary },
+        { value: `$${fmtLarge(data.products?.reduce((s: number, p: any) => s + Number(p.revenue || 0), 0))}`, label: 'Ingresos Totales', valueColor: PDF_COLORS.green },
+        { value: String(data.products?.reduce((s: number, p: any) => s + (p.quantity || 0), 0)), label: 'Unidades Vendidas' },
+      ];
+    case 'rentabilidad':
+      return [
+        { value: String(data.products?.length ?? 0), label: 'Productos', valueColor: PDF_COLORS.primary },
+        { value: `${Math.round(data.products?.reduce((s: number, p: any) => s + Number(p.margin || 0), 0) / Math.max(1, data.products?.length ?? 1))}%`, label: 'Margen Promedio', valueColor: PDF_COLORS.green },
+      ];
+    case 'proveedores':
+      return [
+        { value: String(data.totalSuppliers ?? 0), label: 'Proveedores', valueColor: PDF_COLORS.primary },
+        { value: `$${fmtLarge(data.totalPOSpent)}`, label: 'Gasto Total', valueColor: PDF_COLORS.amber },
+        { value: `${data.onTimeRate ?? 0}%`, label: 'Entrega a Tiempo', valueColor: data.onTimeRate >= 80 ? PDF_COLORS.green : [239, 68, 68] },
+      ];
+    case 'pedidos-especiales':
+      return [
+        { value: String(data.totalOrders ?? 0), label: 'Total Pedidos', valueColor: PDF_COLORS.primary },
+        { value: `${data.avgLifecycleDays ?? 0} días`, label: 'Ciclo Promedio' },
+      ];
+    case 'productividad':
+      return [
+        { value: String(data.users?.length ?? 0), label: 'Usuarios', valueColor: PDF_COLORS.primary },
+        { value: String(data.users?.reduce((s: number, u: any) => s + (u.activities || 0), 0) ?? 0), label: 'Total Actividades' },
+        { value: String(data.users?.reduce((s: number, u: any) => s + (u.sales || 0), 0) ?? 0), label: 'Ventas Realizadas', valueColor: PDF_COLORS.green },
+      ];
+    default:
+      return [];
+  }
+}
+
+function buildSummaryText(data: any, type: string): string {
+  switch (type) {
+    case 'ventas': {
+      const count = data.totalSales ?? 0;
+      const rev = Number(data.totalRevenue ?? 0);
+      const avg = Number(data.avgTicket ?? 0);
+      return `Durante el período analizado se realizaron ${count} transacciones por un monto total de $${rev.toLocaleString('es-VE', { minimumFractionDigits: 2 })}. El ticket promedio por transacción fue de $${avg.toFixed(2)}.`;
+    }
+    case 'inventario': {
+      const total = data.totalProducts ?? 0;
+      const val = Number(data.totalStockValue ?? 0);
+      const low = data.lowStockCount ?? 0;
+      return `El inventario cuenta con ${total} productos registrados con un valor total de $${val.toLocaleString('es-VE', { minimumFractionDigits: 2 })}. Actualmente ${low} productos tienen stock bajo y requieren atención.`;
+    }
+    case 'clientes': {
+      const total = data.totalClients ?? 0;
+      const ltv = Number(data.avgLifetimeValue ?? 0);
+      const churn = data.highChurnClients ?? 0;
+      return `La base de datos registra ${total} clientes activos con un valor de vida útil (LTV) promedio de $${ltv.toFixed(2)} por cliente. ${churn > 0 ? `${churn} cliente(s) presentan alto riesgo de fuga y requieren acciones de retención.` : 'No se detectaron clientes con alto riesgo de fuga en este período.'}`;
+    }
+    case 'actividades':
+      return `Se han registrado ${data.total ?? 0} actividades en el CRM. De estas, ${data.overdue ?? 0} se encuentran vencidas y requieren seguimiento prioritario.`;
+    case 'top-productos': {
+      const top = data.products?.slice(0, 3).map((p: any) => p.name).join(', ') || '';
+      return `Los productos más vendidos del período generaron ingresos significativos. Los 3 principales son: ${top}. Revise la tabla completa para más detalles.`;
+    }
+    case 'rentabilidad': {
+      const avgMargin = data.products?.length
+        ? Math.round(data.products.reduce((s: number, p: any) => s + Number(p.margin || 0), 0) / data.products.length)
+        : 0;
+      return `Se analizó la rentabilidad de ${data.products?.length ?? 0} productos. El margen de ganancia promedio es de ${avgMargin}%. Los productos con margen inferior al 15% deben revisarse para ajuste de precios.`;
+    }
+    case 'proveedores':
+      return `Se gestionan ${data.totalSuppliers ?? 0} proveedores con un gasto total de $${Number(data.totalPOSpent ?? 0).toLocaleString()}. La tasa de entrega a tiempo es del ${data.onTimeRate ?? 0}%.`;
+    case 'pedidos-especiales':
+      return `Se registraron ${data.totalOrders ?? 0} pedidos especiales con un ciclo de vida promedio de ${data.avgLifecycleDays ?? 0} días desde la solicitud hasta la entrega.`;
+    case 'productividad': {
+      const totalActs = data.users?.reduce((s: number, u: any) => s + (u.activities || 0), 0) ?? 0;
+      const totalSales = data.users?.reduce((s: number, u: any) => s + (u.sales || 0), 0) ?? 0;
+      return `El equipo de ${data.users?.length ?? 0} usuarios registró ${totalActs} actividades y ${totalSales} ventas en el período. Revise el detalle por usuario en la tabla adjunta.`;
+    }
+    default:
+      return '';
+  }
+}
+
 function drawBarChart(doc: jsPDF, items: { label: string; values: { name: string; value: number; color: string }[] }[], x: number, y: number, w: number, h: number, title?: string) {
   if (!items.length) return y;
   const hasMultipleSeries = items[0]?.values.length > 1;
   const seriesCount = hasMultipleSeries ? items[0]!.values.length : 1;
-  const marginL = 36;
-  const marginR = 8;
-  const marginT = title ? 14 : 4;
+  const marginL = 30;
+  const marginR = 4;
+  const marginT = title ? 18 : 4;
   const chartW = w - marginL - marginR;
-  const chartH = h - marginT - 16;
+  const chartH = h - marginT - 20;
   const chartX = x + marginL;
   const chartY = y + marginT;
   const barW = chartW;
 
-  if (title) { doc.setFontSize(10); doc.setTextColor(80, 80, 80); doc.text(title, x + w / 2, y + 4, { align: 'center' }); }
+  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
 
   const maxVal = Math.max(...items.flatMap((i) => i.values.map((v) => v.value)));
   const roundedMax = Math.ceil(maxVal * 1.1 / (10 ** Math.floor(Math.log10(maxVal || 1)))) * (10 ** Math.floor(Math.log10(maxVal || 1))) || 1;
   const gridSteps = 4;
 
   doc.setDrawColor(220, 220, 220);
-  doc.setFontSize(7);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
   for (let i = 0; i <= gridSteps; i++) {
     const val = (roundedMax / gridSteps) * i;
@@ -87,59 +199,61 @@ function drawBarChart(doc: jsPDF, items: { label: string; values: { name: string
       const by = chartY + chartH - barHeight;
       doc.setFillColor(parseInt(val.color.slice(1, 3), 16), parseInt(val.color.slice(3, 5), 16), parseInt(val.color.slice(5, 7), 16));
       doc.rect(bx, by, Math.max(4, barItemW), barHeight, 'F');
-      // Value label on top of bar
-      if (barHeight > 8) {
-        doc.setFontSize(6);
+      if (barHeight > 10) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 255, 255);
         doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by + 4, { align: 'center' });
       } else {
-        doc.setFontSize(6);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by - 2, { align: 'center' });
+        doc.text(fmtVal(val.value), bx + Math.max(4, barItemW) / 2, by - 3, { align: 'center' });
       }
     });
-    // X label
-    doc.setFontSize(7);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
     const label = item.label.length > 14 ? item.label.slice(0, 13) + '…' : item.label;
-    doc.text(label, gx + groupWidth / 2, chartY + chartH + 8, { align: 'center' });
+    doc.text(label, gx + groupWidth / 2, chartY + chartH + 10, { align: 'center' });
   });
 
-  // Legend for multi-series
   if (hasMultipleSeries) {
-    const legendY = chartY + chartH + 18;
+    const legendY = chartY + chartH + 20;
     items[0]!.values.forEach((val, si) => {
       const lx = x + 10 + si * 60;
       doc.setFillColor(parseInt(val.color.slice(1, 3), 16), parseInt(val.color.slice(3, 5), 16), parseInt(val.color.slice(5, 7), 16));
-      doc.rect(lx, legendY, 8, 4, 'F');
-      doc.setFontSize(7);
+      doc.rect(lx, legendY, 10, 4, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
-      doc.text(val.name, lx + 10, legendY + 4);
+      doc.text(val.name, lx + 12, legendY + 4);
     });
-    return legendY + 10;
+    return legendY + 12;
   }
 
-  return chartY + chartH + 26;
+  return chartY + chartH + 28;
 }
 
 function drawLineChart(doc: jsPDF, points: { label: string; values: { name: string; value: number; color: string }[] }[], x: number, y: number, w: number, h: number, title?: string) {
   if (!points.length) return y;
-  const marginL = 36;
-  const marginR = 8;
-  const marginT = title ? 14 : 4;
+  const marginL = 30;
+  const marginR = 4;
+  const marginT = title ? 18 : 4;
   const chartW = w - marginL - marginR;
   const chartH = h - marginT - 20;
   const chartX = x + marginL;
   const chartY = y + marginT;
 
-  if (title) { doc.setFontSize(10); doc.setTextColor(80, 80, 80); doc.text(title, x + w / 2, y + 4, { align: 'center' }); }
+  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, chartX + chartW / 2, y + 5, { align: 'center' }); }
 
   const maxVal = Math.max(...points.flatMap((p) => p.values.map((v) => v.value)));
   const roundedMax = Math.ceil(maxVal * 1.1 / (10 ** Math.floor(Math.log10(maxVal || 1)))) * (10 ** Math.floor(Math.log10(maxVal || 1))) || 1;
   const gridSteps = 4;
 
   doc.setDrawColor(220, 220, 220);
-  doc.setFontSize(7);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
   for (let i = 0; i <= gridSteps; i++) {
     const val = (roundedMax / gridSteps) * i;
@@ -160,83 +274,206 @@ function drawLineChart(doc: jsPDF, points: { label: string; values: { name: stri
     }));
 
     doc.setDrawColor(parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16));
-    doc.setLineWidth(1);
+    doc.setLineWidth(1.2);
     for (let j = 1; j < pts.length; j++) {
       doc.line(pts[j - 1]!.px, pts[j - 1]!.py, pts[j]!.px, pts[j]!.py);
     }
 
     pts.forEach((pt) => {
       doc.setFillColor(parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16));
-      doc.circle(pt.px, pt.py, 1.5, 'F');
-      // Value label above dot
-      doc.setFontSize(6);
+      doc.circle(pt.px, pt.py, 2, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(80, 80, 80);
-      doc.text(fmtVal(pt.val), pt.px, pt.py - 3, { align: 'center' });
+      doc.text(fmtVal(pt.val), pt.px, pt.py - 4, { align: 'center' });
     });
 
     const step = Math.max(1, Math.floor(points.length / 12));
     points.forEach((p, i) => {
       if (i % step === 0 || i === points.length - 1) {
-        doc.setFontSize(6);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        const label = p.label.length > 8 ? p.label.slice(0, 7) + '…' : p.label;
-        doc.text(label, chartX + i * (chartW / Math.max(1, points.length - 1)), chartY + chartH + 8, { align: 'center' });
+        const label = p.label.length > 10 ? p.label.slice(0, 9) + '…' : p.label;
+        doc.text(label, chartX + i * (chartW / Math.max(1, points.length - 1)), chartY + chartH + 10, { align: 'center' });
       }
     });
   });
 
   if (seriesNames.length > 1) {
-    const legendY = chartY + chartH + 18;
+    const legendY = chartY + chartH + 20;
     seriesNames.forEach((name, si) => {
       const lx = x + 10 + si * 50;
       doc.setFillColor(parseInt(seriesColors[si % seriesColors.length]!.slice(1, 3), 16), parseInt(seriesColors[si % seriesColors.length]!.slice(3, 5), 16), parseInt(seriesColors[si % seriesColors.length]!.slice(5, 7), 16));
-      doc.rect(lx, legendY, 8, 4, 'F');
-      doc.setFontSize(7);
+      doc.rect(lx, legendY, 10, 4, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
-      doc.text(name, lx + 10, legendY + 4);
+      doc.text(name, lx + 12, legendY + 4);
     });
-    return legendY + 10;
+    return legendY + 12;
   }
 
-  return chartY + chartH + 26;
+  return chartY + chartH + 28;
 }
 
 function drawPieAsBars(doc: jsPDF, items: { name: string; value: number }[], x: number, y: number, w: number, h: number, title?: string) {
   if (!items.length) return y;
-  if (title) { doc.setFontSize(10); doc.setTextColor(80, 80, 80); doc.text(title, x + w / 2, y + 4, { align: 'center' }); y += 8; }
+  if (title) { doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60); doc.text(title, x + w / 2, y + 5, { align: 'center' }); y += 10; }
   const total = items.reduce((s, i) => s + i.value, 0);
   if (!total) return y + 10;
-  const barH = 10;
-  const labelW = 60;
-  const barMaxW = w - labelW - 14;
+  const barH = 12;
+  const labelW = 55;
+  const barMaxW = w - labelW - 8;
   const maxVal = Math.max(...items.map((i) => i.value));
 
   items.forEach((item, idx) => {
-    const by = y + idx * (barH + 4);
+    const by = y + idx * (barH + 5);
     const pct = ((item.value / total) * 100).toFixed(1);
     const bw = (item.value / maxVal) * barMaxW;
 
-    doc.setFontSize(7);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    const label = item.name.length > 18 ? item.name.slice(0, 17) + '…' : item.name;
-    doc.text(label, x, by + 7);
+    const label = item.name.length > 20 ? item.name.slice(0, 19) + '…' : item.name;
+    doc.text(label, x, by + 8);
 
     doc.setFillColor(parseInt(COLORS[idx % COLORS.length]!.slice(1, 3), 16), parseInt(COLORS[idx % COLORS.length]!.slice(3, 5), 16), parseInt(COLORS[idx % COLORS.length]!.slice(5, 7), 16));
     doc.rect(x + labelW, by, Math.max(3, bw), barH, 'F');
 
-    // Value label inside or after bar
     const valText = `${fmtVal(item.value)} (${pct}%)`;
-    doc.setFontSize(6);
-    if (bw > 40) {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    if (bw > 45) {
       doc.setTextColor(255, 255, 255);
-      doc.text(valText, x + labelW + bw / 2, by + 7, { align: 'center' });
+      doc.text(valText, x + labelW + bw / 2, by + 8, { align: 'center' });
     } else {
       doc.setTextColor(80, 80, 80);
-      doc.text(valText, x + labelW + bw + 3, by + 7);
+      doc.text(valText, x + labelW + bw + 4, by + 8);
     }
   });
 
-  return y + items.length * (barH + 4) + 6;
+  return y + items.length * (barH + 5) + 8;
+}
+
+// ----- Chart Card Wrapper -----
+function drawChartCard(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  title: string,
+  chartBodyH: number,
+  drawContent: (d: jsPDF, cx: number, cy: number, cw: number, ch: number) => number,
+  insight?: string
+): number {
+  const headerH = 12;
+  const pad = 6;
+  const bodyY = y + headerH + pad;
+
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(x, y, w, headerH, 'F');
+  doc.setTextColor(...PDF_COLORS.primaryDark);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, x + 4, y + 8);
+
+  const chartEndY = drawContent(doc, x, bodyY, w, chartBodyH);
+
+  const insightLines = insight ? doc.splitTextToSize(insight, w - 8) : [];
+  const insightH = insightLines.length > 0 ? insightLines.length * 4 + 8 : 0;
+
+  if (insightLines.length > 0) {
+    const insightY = chartEndY + 4;
+    doc.setTextColor(...PDF_COLORS.grayText);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'italic');
+    insightLines.forEach((line: string, i: number) => {
+      doc.text(line, x + 4, insightY + 4 + i * 4);
+    });
+  }
+
+  const totalH = chartEndY - y + insightH + pad;
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, w, totalH, 'S');
+
+  return y + totalH + 8;
+}
+
+// ----- Insight text generators -----
+function buildDayInsight(data: any): string {
+  if (!data.byDay?.length) return '';
+  const max = data.byDay.reduce((best: any, d: any) => Number(d.total) > Number(best.total) ? d : best);
+  const total = data.byDay.reduce((s: number, d: any) => s + Number(d.total), 0);
+  const avg = total / data.byDay.length;
+  return `El día con mayor actividad fue ${max.date} con $${Number(max.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}. El promedio diario fue de $${avg.toFixed(2)}.`;
+}
+
+function buildPaymentInsight(data: any): string {
+  const methods = Object.entries(data.byPaymentMethod || {});
+  if (!methods.length) return '';
+  const top = methods.sort((a: any, b: any) => Number(b[1]) - Number(a[1]))[0];
+  return `El metodo de pago mas utilizado fue "${top[0]}" con ${top[1]} transacciones.`;
+}
+
+function buildTopProductInsight(data: any): string {
+  if (!data.products?.length) return '';
+  const top = data.products[0];
+  return `"${top.name}" es el producto mas vendido con ${top.quantity} unidades y $${Number(top.revenue).toFixed(2)} en ingresos.`;
+}
+
+function buildMarginInsight(data: any): string {
+  if (!data.byCategory?.length) return '';
+  const sorted = [...data.byCategory].sort((a: any, b: any) => Number(b.avgMargin) - Number(a.avgMargin));
+  return `"${sorted[0].name}" tiene el margen mas alto (${sorted[0].avgMargin}%), mientras que "${sorted[sorted.length - 1].name}" tiene el mas bajo (${sorted[sorted.length - 1].avgMargin}%).`;
+}
+
+function buildSegmentInsight(data: any, key: string): string {
+  const src = data[key] || [];
+  if (!src.length || !src[0]?.count) return '';
+  const top = src.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
+  return `"${top.name}" es el segmento mas representativo con ${top.count} registros.`;
+}
+
+function buildActivityTypeInsight(data: any): string {
+  if (!data.byType?.length) return '';
+  const top = data.byType.reduce((best: any, t: any) => Number(t.count) > Number(best.count) ? t : best);
+  return `El tipo de actividad mas frecuente es "${top.name}" con ${top.count} registros.`;
+}
+
+function buildUserInsight(data: any): string {
+  if (!data.users?.length) return '';
+  const top = data.users.reduce((best: any, u: any) => Number(u.activities || 0) > Number(best.activities || 0) ? u : best);
+  return `${top.name} fue el usuario mas activo con ${top.activities} actividades y ${top.sales} ventas.`;
+}
+
+function buildStatusInsight(data: any): string {
+  if (!data.byStatus?.length) return '';
+  const top = data.byStatus.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
+  return `La mayoria de los pedidos estan en estado "${top.name}" (${top.count} registros).`;
+}
+
+function buildRatingInsight(data: any): string {
+  if (!data.byRating?.length) return '';
+  const totalVal = data.byRating.reduce((s: number, r: any) => s + Number(r.value) * Number(r.count), 0);
+  const totalCount = data.byRating.reduce((s: number, r: any) => s + Number(r.count), 0);
+  if (!totalCount) return '';
+  return `La calificacion promedio de proveedores es de ${(totalVal / totalCount).toFixed(1)} estrellas.`;
+}
+
+function buildProductivityInsight(data: any): string {
+  if (!data.users?.length) return '';
+  const best = data.users.reduce((b: any, u: any) => Number(u.sales || 0) > Number(b.sales || 0) ? u : b);
+  return `${best.name} lidera en ventas con ${best.sales} transacciones. Revise el detalle completo en la tabla.`;
+}
+
+function buildCategoryInsight(data: any): string {
+  if (!data.byCategory?.length) return '';
+  const src = data.byCategory;
+  const key = src[0]?.stockValue !== undefined ? 'stockValue' : src[0]?.avgMargin !== undefined ? 'avgMargin' : 'count';
+  const top = src.reduce((best: any, c: any) => Number(c[key]) > Number(best[key]) ? c : best);
+  return `"${top.name}" lidera la categoria con ${fmtLarge(top[key])} en valor.`;
 }
 
 interface ReportTab { id: string; label: string; icon: any; group: string }
@@ -320,67 +557,145 @@ export default function ReportsPage() {
       doc.text(`Periodo: ${dateFrom || 'inicio'} - ${dateTo || 'hoy'}`, PDF_CONFIG.margin, cursorY);
       cursorY += 6;
     }
-    cursorY += 4;
+    cursorY += 2;
+
+    const summaryText = buildSummaryText(data, activeReport);
+    if (summaryText) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...PDF_COLORS.grayText);
+      const lines = doc.splitTextToSize(summaryText, PDF_CONFIG.contentWidth);
+      lines.forEach((line: string) => {
+        doc.text(line, PDF_CONFIG.margin, cursorY);
+        cursorY += 4;
+      });
+      cursorY += 3;
+    }
+
+    const kpiCards = buildKpiCards(data, activeReport);
+    if (kpiCards.length > 0) {
+      cursorY = drawKpiRow(doc, cursorY, kpiCards);
+      drawDividerLine(doc, cursorY - 3);
+    }
 
     const pageW = PDF_CONFIG.contentWidth;
-    const chartH = 55;
-
     const cx = PDF_CONFIG.margin;
+    const pageBottom = doc.internal.pageSize.getHeight() - 20;
+
     if (activeReport === 'ventas') {
       if (data.byDay?.length > 0) {
+        if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
         const pts = data.byDay.map((d: any) => ({ label: d.date.slice(5), values: [{ name: 'Total', value: Number(d.total), color: '#6366f1' }, { name: 'Transacciones', value: d.count, color: '#10b981' }] }));
-        cursorY = drawLineChart(doc, pts, cx, cursorY, pageW, chartH, 'Tendencia diaria') + 6;
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Tendencia diaria', 48,
+          (d, cx2, cy2, cw2, ch2) => drawLineChart(d, pts, cx2, cy2, cw2, ch2),
+          buildDayInsight(data)
+        );
       }
       if (data.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0) {
+        if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
         const items = Object.entries(data.byPaymentMethod).map(([k, v]) => ({ name: k, value: Number(v) }));
-        cursorY = drawPieAsBars(doc, items, cx, cursorY, pageW, Math.min(50, items.length * 14 + 10), 'Por metodo de pago') + 6;
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por metodo de pago', items.length * 17 + 10,
+          (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, items, cx2, cy2, cw2, ch2),
+          buildPaymentInsight(data)
+        );
       }
     }
 
     if (activeReport === 'inventario' && data.byCategory?.length > 0) {
+      if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
       const items = data.byCategory.map((c: any) => ({ label: c.name, values: [{ name: 'Valor Inventario', value: Number(c.stockValue), color: '#6366f1' }, { name: 'Productos', value: c.count, color: '#10b981' }] }));
-      cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Valor de inventario por categoria') + 6;
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Valor de inventario por categoria', 48,
+        (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+        buildCategoryInsight(data)
+      );
     }
 
     if (activeReport === 'clientes') {
-      if (data.byCategory?.length > 0) cursorY = drawPieAsBars(doc, data.byCategory, cx, cursorY, pageW, data.byCategory.length * 14, 'Por categoria') + 6;
-      if (data.byStage?.length > 0) cursorY = drawPieAsBars(doc, data.byStage, cx, cursorY, pageW, data.byStage.length * 14, 'Por etapa') + 6;
-      if (data.bySource?.length > 0) cursorY = drawPieAsBars(doc, data.bySource, cx, cursorY, pageW, data.bySource.length * 14, 'Por fuente') + 6;
+      if (data.byCategory?.length > 0) {
+        if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por categoria', data.byCategory.length * 17 + 10,
+          (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byCategory, cx2, cy2, cw2, ch2),
+          buildSegmentInsight(data, 'byCategory')
+        );
+      }
+      if (data.byStage?.length > 0) {
+        if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por etapa', data.byStage.length * 17 + 10,
+          (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byStage, cx2, cy2, cw2, ch2),
+          buildSegmentInsight(data, 'byStage')
+        );
+      }
+      if (data.bySource?.length > 0) {
+        if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por fuente', data.bySource.length * 17 + 10,
+          (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.bySource, cx2, cy2, cw2, ch2),
+          buildSegmentInsight(data, 'bySource')
+        );
+      }
     }
 
     if (activeReport === 'actividades') {
+      const ch = 42;
       if (data.byType?.length > 0) {
+        if (cursorY + 95 > pageBottom) { doc.addPage(); cursorY = 14; }
         const items = data.byType.map((t: any) => ({ label: t.name, values: [{ name: 'Count', value: t.count, color: '#6366f1' }] }));
-        cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Por tipo') + 6;
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por tipo', ch,
+          (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+          buildActivityTypeInsight(data)
+        );
       }
       if (data.byUser?.length > 0) {
+        if (cursorY + 95 > pageBottom) { doc.addPage(); cursorY = 14; }
         const items = data.byUser.map((u: any) => ({ label: u.name, values: [{ name: 'Total', value: u.count, color: '#6366f1' }, { name: 'Completadas', value: u.completed, color: '#10b981' }] }));
-        cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Por usuario') + 6;
+        cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por usuario', ch,
+          (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+          buildUserInsight(data)
+        );
       }
     }
 
     if (activeReport === 'top-productos' && data.products?.length > 0) {
+      if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
       const items = data.products.slice(0, 10).map((p: any) => ({ label: p.name, values: [{ name: 'Ingresos', value: Number(p.revenue), color: '#6366f1' }, { name: 'Cantidad', value: p.quantity, color: '#10b981' }] }));
-      cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Top productos por ingresos') + 6;
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Top productos por ingresos', 48,
+        (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+        buildTopProductInsight(data)
+      );
     }
 
     if (activeReport === 'rentabilidad' && data.byCategory?.length > 0) {
+      if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
       const items = data.byCategory.map((c: any) => ({ label: c.name, values: [{ name: 'Margen %', value: Number(c.avgMargin), color: '#6366f1' }] }));
-      cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Margen promedio por categoria') + 6;
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Margen promedio por categoria', 48,
+        (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+        buildMarginInsight(data)
+      );
     }
 
     if (activeReport === 'pedidos-especiales' && data.byStatus?.length > 0) {
+      if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
       const items = data.byStatus.map((s: any) => ({ label: s.name, values: [{ name: 'Pedidos', value: s.count, color: '#6366f1' }] }));
-      cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Por estado') + 6;
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por estado', 48,
+        (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+        buildStatusInsight(data)
+      );
     }
 
     if (activeReport === 'productividad' && data.users?.length > 0) {
+      if (cursorY + 100 > pageBottom) { doc.addPage(); cursorY = 14; }
       const items = data.users.map((u: any) => ({ label: u.name, values: [{ name: 'Actividades', value: u.activities, color: '#6366f1' }, { name: 'Completadas', value: u.completedActivities, color: '#10b981' }, { name: 'Ventas', value: u.sales, color: '#f59e0b' }] }));
-      cursorY = drawBarChart(doc, items, cx, cursorY, pageW, chartH, 'Comparativa del equipo') + 6;
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Comparativa del equipo', 48,
+        (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
+        buildProductivityInsight(data)
+      );
     }
 
     if (activeReport === 'proveedores' && data.byRating?.length > 0) {
-      cursorY = drawPieAsBars(doc, data.byRating, cx, cursorY, pageW, data.byRating.length * 14, 'Distribucion por rating') + 6;
+      if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
+      cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Distribucion por rating', data.byRating.length * 17 + 10,
+        (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byRating, cx2, cy2, cw2, ch2),
+        buildRatingInsight(data)
+      );
     }
 
     // --- Table ---
@@ -390,7 +705,7 @@ export default function ReportsPage() {
       const columnStyles = colCfg?.styles;
       const tableWidth = colCfg?.tableWidth;
       const startY = Math.min(cursorY, doc.internal.pageSize.height - 30);
-      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 7, cellPadding: 1 }, headStyles: { fillColor: [...PDF_COLORS.primary], textColor: [...PDF_COLORS.white], fontSize: 7, cellPadding: 1 }, margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }, columnStyles };
+      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [...PDF_COLORS.primary], textColor: [...PDF_COLORS.white], fontStyle: 'bold', fontSize: 9, cellPadding: 2.5 }, alternateRowStyles: { fillColor: [...PDF_COLORS.primaryLight] }, margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }, columnStyles };
       if (tableWidth) opts.tableWidth = tableWidth;
       if (startY + rows.length * 5 > doc.internal.pageSize.height - 20) {
         doc.addPage();

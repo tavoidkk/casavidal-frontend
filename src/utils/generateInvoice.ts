@@ -2,13 +2,11 @@ import type { Sale } from '../types';
 import {
   createPDFDocument,
   drawHeader,
-  drawSectionLabel,
-  drawInfoLine,
-  drawInfoLineRight,
-  drawLabelValueLine,
+  drawInfoCard,
   createItemsTable,
   drawSummaryLine,
   drawTotalBox,
+  drawDividerLine,
   drawFooter,
   PDF_COLORS,
   PDF_CONFIG,
@@ -41,23 +39,14 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
   drawHeader(pdf, `FACTURA ${sale.saleNumber}`, dateStr, logoBase64);
 
   let yPos = 55;
-  const infoGap = 6;
-  drawSectionLabel(pdf, yPos, 'DATOS DEL CLIENTE');
 
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(100, 116, 139);
-  pdf.text(`RIF: ${EMPRESA_RIF}`, 130, yPos);
-
-  yPos += 10;
-  drawInfoLine(pdf, yPos, 'Nombre', getClientName(sale));
-  yPos += 5;
-  drawInfoLine(pdf, yPos, 'Teléfono', sale.client.phone || '—');
-
-  drawInfoLineRight(pdf, 65, 'Vendedor', `${sale.seller.firstName} ${sale.seller.lastName}`, 0);
-  drawInfoLineRight(pdf, 71, 'RIF', EMPRESA_RIF, 0);
-  drawInfoLineRight(pdf, 77, 'Teléfono', sale.client.phone || '—', 0);
-  yPos += infoGap + 10;
+  const clientItems: { label: string; value: string }[] = [
+    { label: 'Nombre', value: getClientName(sale) },
+    { label: 'Teléfono', value: sale.client.phone || '—' },
+    { label: 'Vendedor', value: `${sale.seller.firstName} ${sale.seller.lastName}` },
+  ];
+  yPos = drawInfoCard(pdf, yPos, 'DATOS DEL CLIENTE', clientItems, `RIF: ${EMPRESA_RIF}`);
+  drawDividerLine(pdf, yPos - 3);
 
   const tableBody = sale.items.map((item) => [
     item.product.name,
@@ -82,15 +71,7 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
   const hasPaymentTotals = payments.length > 0 && paymentTotalUsd > 0;
   
   if (sale.payments && sale.payments.length > 0) {
-    drawSectionLabel(pdf, yPos, 'PAGOS');
-    yPos += 6;
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('Monto', PDF_CONFIG.margin + PDF_CONFIG.contentWidth, yPos, { align: 'right' });
-    yPos += 6;
-    pdf.setTextColor(...PDF_COLORS.dark);
-    sale.payments.forEach((payment) => {
+    const paymentItems: { label: string; value: string; valueColor?: [number, number, number] }[] = sale.payments.map((payment) => {
       const label = `${PAYMENT_LABELS[payment.paymentMethod] || payment.paymentMethod}`;
       const currencyLabel = payment.currency === 'USD' ? 'USD' : 'Bs.';
       const amountDisplay = payment.currency === 'USD'
@@ -98,24 +79,16 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
         : `Bs. ${Number(payment.amount).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
       const conversion = payment.currency === 'USD' || exchangeRate === 0
         ? ''
-        : ` -> ${formatAmount(Number(payment.amount) / exchangeRate)}`;
-      drawLabelValueLine(
-        pdf,
-        yPos,
-        `${label} (${currencyLabel})`,
-        `${amountDisplay}${conversion}`
-      );
-      yPos += 6;
-      if (payment.reference) {
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(...PDF_COLORS.grayText);
-        pdf.text(`Referencia: ${payment.reference}`, PDF_CONFIG.margin + 4, yPos);
-        yPos += 4;
-        pdf.setTextColor(...PDF_COLORS.dark);
-      }
+        : ` (~${formatAmount(Number(payment.amount) / exchangeRate)})`;
+      const ref = payment.reference ? ` - Ref: ${payment.reference}` : '';
+      return {
+        label: `${label} (${currencyLabel})`,
+        value: `${amountDisplay}${conversion}${ref}`,
+        valueColor: PDF_COLORS.dark,
+      };
     });
-    yPos += 4;
+    yPos = drawInfoCard(pdf, yPos, 'PAGOS', paymentItems);
+    drawDividerLine(pdf, yPos - 3);
   }
 
   const isBs = sale.currency === 'BS';
@@ -127,8 +100,10 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
       ? formatAmount(paymentTotalUsd)
       : formatAmount(Number(sale.total)));
 
+  yPos += 4;
+  drawDividerLine(pdf, yPos - 2);
+
   if (Number(sale.tax) > 0) {
-    yPos += 5;
     drawSummaryLine(pdf, yPos, 'IVA', formatAmount(Number(sale.tax)), PDF_COLORS.amber);
     yPos += 6;
   }
@@ -139,17 +114,17 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
     yPos += 10;
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(100, 116, 139);
+    pdf.setTextColor(...PDF_COLORS.grayText);
     const usdRef = `$${Number(sale.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })} (tasa ${sale.usdToBsRateAtSale})`;
     pdf.text(`USD ref: ${usdRef}`, 130, yPos);
   }
 
-  const notesY = isBs && sale.usdToBsRateAtSale ? yPos + 8 : yPos + 6;
   if (sale.notes) {
+    yPos += 8;
     pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'italic');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text(`Notas: ${sale.notes}`, 15, notesY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...PDF_COLORS.grayText);
+    pdf.text(`Notas: ${sale.notes}`, PDF_CONFIG.margin, yPos);
   }
 
   drawFooter(pdf, 'Este documento es una factura de control interno.');

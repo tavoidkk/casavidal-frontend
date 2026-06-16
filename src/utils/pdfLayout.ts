@@ -125,12 +125,12 @@ export function createItemsTable(pdf: jsPDF, startY: number, head: string[][], b
       fillColor: PDF_COLORS.primary,
       textColor: PDF_COLORS.white,
       fontStyle: 'bold',
-      fontSize: 9,
-      cellPadding: 4,
+      fontSize: 10,
+      cellPadding: 5,
     },
     bodyStyles: {
-      fontSize: 8,
-      cellPadding: 3,
+      fontSize: 9,
+      cellPadding: 4,
     },
     alternateRowStyles: {
       fillColor: PDF_COLORS.primaryLight,
@@ -152,8 +152,9 @@ export function drawSummaryLine(
   value: string,
   color?: [number, number, number]
 ): void {
-  const summaryX = 130;
+  const rightEdge = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
   const summaryWidth = 65;
+  const summaryX = rightEdge - summaryWidth;
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
@@ -165,7 +166,7 @@ export function drawSummaryLine(
   }
 
   pdf.text(label, summaryX, y);
-  pdf.text(value, summaryX + summaryWidth - 2, y, { align: 'right' });
+  pdf.text(value, rightEdge, y, { align: 'right' });
 
   if (color) {
     pdf.setTextColor(...PDF_COLORS.dark);
@@ -173,8 +174,9 @@ export function drawSummaryLine(
 }
 
 export function drawTotalBox(pdf: jsPDF, y: number, label: string, value: string): void {
-  const summaryX = 130;
+  const rightEdge = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
   const summaryWidth = 65;
+  const summaryX = rightEdge - summaryWidth;
 
   pdf.setFillColor(...PDF_COLORS.primaryDark);
   pdf.rect(summaryX - 2, y - 3, summaryWidth + 4, 8, 'F');
@@ -182,7 +184,97 @@ export function drawTotalBox(pdf: jsPDF, y: number, label: string, value: string
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(11);
   pdf.text(label, summaryX, y + 1);
-  pdf.text(value, summaryX + summaryWidth - 2, y + 1, { align: 'right' });
+  pdf.text(value, rightEdge, y + 1, { align: 'right' });
+}
+
+export function drawInfoCard(
+  pdf: jsPDF,
+  startY: number,
+  title: string,
+  items: { label: string; value: string; valueColor?: [number, number, number] }[],
+  rightHeader?: string
+): number {
+  const leftX = PDF_CONFIG.margin;
+  const rightX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
+  const rowH = 6;
+  const padY = 3;
+  const headerH = 10;
+  const bodyH = items.length * rowH + padY * 2;
+  const totalH = headerH + bodyH + 2;
+
+  pdf.setDrawColor(...PDF_COLORS.primaryLight);
+  pdf.setLineWidth(0.5);
+  pdf.rect(leftX, startY, PDF_CONFIG.contentWidth, totalH);
+
+  pdf.setFillColor(...PDF_COLORS.primaryLight);
+  pdf.rect(leftX, startY, PDF_CONFIG.contentWidth, headerH, 'F');
+
+  pdf.setTextColor(...PDF_COLORS.primaryDark);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(title, leftX + 3, startY + 6.5);
+
+  if (rightHeader) {
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...PDF_COLORS.grayText);
+    pdf.text(rightHeader, rightX - 3, startY + 6.5, { align: 'right' });
+  }
+
+  const valueX = leftX + 52;
+  const maxValueWidth = rightX - valueX - 4;
+
+  items.forEach((item, i) => {
+    const iy = startY + headerH + padY + i * rowH;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...PDF_COLORS.grayText);
+    pdf.text(item.label, leftX + 4, iy + 4);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...(item.valueColor ?? PDF_COLORS.dark));
+    pdf.text(item.value, valueX, iy + 4, { maxWidth: maxValueWidth });
+  });
+
+  return startY + totalH + 6;
+}
+
+export function drawKpiRow(
+  pdf: jsPDF,
+  y: number,
+  cards: { value: string; label: string; valueColor?: [number, number, number] }[]
+): number {
+  const totalWidth = PDF_CONFIG.contentWidth;
+  const gap = 4;
+  const cardW = (totalWidth - gap * (cards.length - 1)) / cards.length;
+  const cardH = 22;
+
+  cards.forEach((card, i) => {
+    const cx = PDF_CONFIG.margin + i * (cardW + gap);
+
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.3);
+    pdf.rect(cx, y, cardW, cardH, 'FD');
+
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...(card.valueColor ?? PDF_COLORS.primary));
+    pdf.text(card.value, cx + cardW / 2, y + 10, { align: 'center' });
+
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...PDF_COLORS.grayText);
+    pdf.text(card.label, cx + cardW / 2, y + 16, { align: 'center' });
+  });
+
+  return y + cardH + 6;
+}
+
+export function drawDividerLine(pdf: jsPDF, y: number): void {
+  pdf.setDrawColor(220, 220, 220);
+  pdf.setLineWidth(0.3);
+  pdf.line(PDF_CONFIG.margin, y, PDF_CONFIG.margin + PDF_CONFIG.contentWidth, y);
 }
 
 export function drawFooter(pdf: jsPDF, text: string): void {

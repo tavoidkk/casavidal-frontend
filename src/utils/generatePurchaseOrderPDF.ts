@@ -2,12 +2,12 @@ import type { PurchaseOrder } from '../types';
 import {
   createPDFDocument,
   drawHeader,
-  drawSectionLabel,
-  drawInfoLine,
-  drawInfoLineRight,
+  drawInfoCard,
   createItemsTable,
   drawTotalBox,
+  drawDividerLine,
   drawFooter,
+  PDF_COLORS,
 } from './pdfLayout';
 
 const EMPRESA_RIF = 'J-30999631-2';
@@ -23,27 +23,23 @@ export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: stri
   drawHeader(pdf, `ORDEN DE COMPRA ${order.orderNumber}`, dateStr, logoBase64);
 
   let yPos = 55;
-  drawSectionLabel(pdf, yPos, 'DATOS DEL PROVEEDOR');
 
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(100, 116, 139);
-  pdf.text(`RIF: ${EMPRESA_RIF}`, 130, yPos);
-
-  yPos += 10;
-  drawInfoLine(pdf, yPos, 'Nombre', order.supplier.name);
-  yPos += 5;
-  drawInfoLine(pdf, yPos, 'Teléfono', order.supplier.phone || '—');
-
-  drawInfoLineRight(pdf, 65, 'Estado', order.status, 0);
+  const supplierItems: { label: string; value: string; valueColor?: [number, number, number] }[] = [
+    { label: 'Nombre', value: order.supplier.name },
+    { label: 'Teléfono', value: order.supplier.phone || '—' },
+    { label: 'Estado', value: order.status, valueColor: PDF_COLORS.primary },
+  ];
   if (order.expectedDate) {
-    drawInfoLineRight(pdf, 71, 'Fecha estimada', new Date(order.expectedDate).toLocaleDateString('es-VE'), 0);
+    supplierItems.push({
+      label: 'Fecha estimada',
+      value: new Date(order.expectedDate).toLocaleDateString('es-VE'),
+    });
   }
   if (order.paymentTerms) {
-    drawInfoLineRight(pdf, 77, 'Pago', order.paymentTerms, 0);
+    supplierItems.push({ label: 'Pago', value: order.paymentTerms });
   }
-
-  yPos += 10;
+  yPos = drawInfoCard(pdf, yPos, 'DATOS DEL PROVEEDOR', supplierItems, `RIF: ${EMPRESA_RIF}`);
+  drawDividerLine(pdf, yPos - 3);
 
   const tableBody = order.items.map((item) => [
     item.productName,
