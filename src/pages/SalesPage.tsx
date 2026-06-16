@@ -13,6 +13,7 @@ import { formatBs } from '../utils/currency';
 import { SaleForm } from '../components/sales/SaleForm';
 import { DraftSalesList } from '../components/sales/DraftSalesList';
 import { generateInvoicePDF } from '../utils/generateInvoice';
+import { getLogoBase64 } from '../utils/pdfLogo';
 import { staggerContainer, staggerItem } from '../utils/motion';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -141,11 +142,12 @@ export default function SalesPage() {
   };
 
   const handleDownloadInvoice = async (sale: Sale) => {
+    const logoBase64 = await getLogoBase64();
     try {
       const full = await salesApi.getById(sale.id);
-      generateInvoicePDF(full);
+      generateInvoicePDF(full, logoBase64 ?? undefined);
     } catch {
-      generateInvoicePDF(sale);
+      generateInvoicePDF(sale, logoBase64 ?? undefined);
     }
   };
 

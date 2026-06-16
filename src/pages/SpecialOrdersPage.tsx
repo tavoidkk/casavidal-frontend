@@ -20,6 +20,7 @@ import { useAuthStore } from '../store/auth.store';
 import { staggerContainer, staggerItem } from '../utils/motion';
 import { generateInvoicePDF } from '../utils/generateInvoice';
 import { generatePurchaseOrderPDF } from '../utils/generatePurchaseOrderPDF';
+import { getLogoBase64 } from '../utils/pdfLogo';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -202,18 +203,20 @@ export default function SpecialOrdersPage() {
   };
 
   const handleDownloadPO = async (poId: string) => {
+    const logoBase64 = await getLogoBase64();
     try {
       const po = await purchaseOrdersApi.getById(poId);
-      generatePurchaseOrderPDF(po);
+      generatePurchaseOrderPDF(po, logoBase64 ?? undefined);
     } catch {
       alert('Error al descargar la orden de compra');
     }
   };
 
   const handleDownloadInvoice = async (saleId: string) => {
+    const logoBase64 = await getLogoBase64();
     try {
       const sale = await salesApi.getById(saleId);
-      generateInvoicePDF(sale);
+      generateInvoicePDF(sale, logoBase64 ?? undefined);
     } catch {
       alert('Error al descargar la factura');
     }

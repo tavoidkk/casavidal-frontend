@@ -12,7 +12,7 @@ import {
 
 const EMPRESA_RIF = 'J-30999631-2';
 
-export function generatePurchaseOrderPDF(order: PurchaseOrder): void {
+export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: string): void {
   const pdf = createPDFDocument();
 
   const dateStr = new Date(order.createdAt).toLocaleDateString('es-VE', {
@@ -20,7 +20,7 @@ export function generatePurchaseOrderPDF(order: PurchaseOrder): void {
     hour: '2-digit', minute: '2-digit',
   });
 
-  drawHeader(pdf, `ORDEN DE COMPRA ${order.orderNumber}`, dateStr);
+  drawHeader(pdf, `ORDEN DE COMPRA ${order.orderNumber}`, dateStr, logoBase64);
 
   let yPos = 55;
   drawSectionLabel(pdf, yPos, 'DATOS DEL PROVEEDOR');

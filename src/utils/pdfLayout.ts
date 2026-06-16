@@ -1,13 +1,17 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getImageFormat } from './pdfLogo';
 
 export const PDF_COLORS = {
-  primary: [59, 130, 246] as [number, number, number],
+  primary: [50, 102, 60] as [number, number, number],
+  primaryLight: [236, 243, 238] as [number, number, number],
+  primaryDark: [37, 75, 45] as [number, number, number],
   dark: [30, 41, 59] as [number, number, number],
   lightGray: [241, 245, 249] as [number, number, number],
   grayText: [100, 116, 139] as [number, number, number],
   green: [22, 163, 74] as [number, number, number],
   amber: [200, 124, 0] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
 };
 
 export const PDF_CONFIG = {
@@ -22,30 +26,51 @@ export function createPDFDocument(): jsPDF {
   return new jsPDF({ orientation: PDF_CONFIG.orientation, unit: 'mm', format: PDF_CONFIG.format });
 }
 
-export function drawHeader(pdf: jsPDF, title: string, dateStr: string): void {
+export function drawHeader(pdf: jsPDF, title: string, dateStr: string, logoBase64?: string): void {
   pdf.setFillColor(...PDF_COLORS.primary);
   pdf.rect(0, 0, 210, PDF_CONFIG.headerHeight, 'F');
 
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(24);
-  pdf.text('CASAVIDAL', PDF_CONFIG.margin, 22);
-  pdf.setFontSize(8);
-  pdf.text('Ferretería Integral', PDF_CONFIG.margin, 28);
+  const rightX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
 
-  pdf.setTextColor(...PDF_COLORS.dark);
-  pdf.setFontSize(14);
+  if (logoBase64) {
+    const logoHeight = 24;
+    const logoWidth = 24;
+    const logoY = (PDF_CONFIG.headerHeight - logoHeight) / 2;
+    const format = getImageFormat(logoBase64);
+    pdf.addImage(logoBase64, format, PDF_CONFIG.margin, logoY, logoWidth, logoHeight);
+
+    const textX = PDF_CONFIG.margin + logoWidth + 6;
+    pdf.setTextColor(...PDF_COLORS.white);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('CASAVIDAL', textX, 20);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Ferretería Integral', textX, 26);
+  } else {
+    pdf.setTextColor(...PDF_COLORS.white);
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('CASAVIDAL', PDF_CONFIG.margin, 22);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Ferretería Integral', PDF_CONFIG.margin, 28);
+  }
+
+  pdf.setTextColor(...PDF_COLORS.white);
+  pdf.setFontSize(13);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(title, 130, 22);
+  pdf.text(title, rightX, 20, { align: 'right' });
 
-  pdf.setFontSize(9);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`Fecha: ${dateStr}`, 130, 28);
+  pdf.text(`Fecha: ${dateStr}`, rightX, 26, { align: 'right' });
 }
 
 export function drawSectionLabel(pdf: jsPDF, y: number, label: string): void {
-  pdf.setFillColor(...PDF_COLORS.lightGray);
+  pdf.setFillColor(...PDF_COLORS.primaryLight);
   pdf.rect(PDF_CONFIG.margin, y - 5, PDF_CONFIG.contentWidth, 8, 'F');
-  pdf.setTextColor(...PDF_COLORS.dark);
+  pdf.setTextColor(...PDF_COLORS.primaryDark);
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
   pdf.text(label, PDF_CONFIG.margin, y);
@@ -98,7 +123,7 @@ export function createItemsTable(pdf: jsPDF, startY: number, head: string[][], b
     theme: 'grid',
     headStyles: {
       fillColor: PDF_COLORS.primary,
-      textColor: [255, 255, 255] as [number, number, number],
+      textColor: PDF_COLORS.white,
       fontStyle: 'bold',
       fontSize: 9,
       cellPadding: 4,
@@ -108,7 +133,7 @@ export function createItemsTable(pdf: jsPDF, startY: number, head: string[][], b
       cellPadding: 3,
     },
     alternateRowStyles: {
-      fillColor: PDF_COLORS.lightGray,
+      fillColor: PDF_COLORS.primaryLight,
     },
     margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin },
     columnStyles: {
@@ -151,9 +176,9 @@ export function drawTotalBox(pdf: jsPDF, y: number, label: string, value: string
   const summaryX = 130;
   const summaryWidth = 65;
 
-  pdf.setFillColor(...PDF_COLORS.primary);
+  pdf.setFillColor(...PDF_COLORS.primaryDark);
   pdf.rect(summaryX - 2, y - 3, summaryWidth + 4, 8, 'F');
-  pdf.setTextColor(255, 255, 255);
+  pdf.setTextColor(...PDF_COLORS.white);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(11);
   pdf.text(label, summaryX, y + 1);

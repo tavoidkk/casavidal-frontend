@@ -1,6 +1,7 @@
 import { useQuotationStore } from '../../store/quotations.store';
 import type { QuotationData } from '../../api/quotations.api';
 import { generateQuotationPDF } from '../../utils/generateQuotationPDF';
+import { getLogoBase64 } from '../../utils/pdfLogo';
 
 interface QuotationPDFProps {
   quotation?: QuotationData;
@@ -10,7 +11,8 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation }) => {
   const { selectedClient, items, subtotal, freight, taxRate, taxAmount, discountAmount, total } =
     useQuotationStore();
 
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = async () => {
+    const logoBase64 = await getLogoBase64();
     const clientInfo = quotation
       ? { name: quotation.clientName, phone: quotation.clientPhone, email: quotation.clientEmail }
       : selectedClient;
@@ -35,6 +37,7 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation }) => {
       discountAmount: finalDiscountAmount,
       total: finalTotal,
       createdAt: quotation?.createdAt,
+      logoBase64: logoBase64 ?? undefined,
     });
   };
 

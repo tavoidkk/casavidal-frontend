@@ -6,6 +6,8 @@ import * as XLSX from 'xlsx';
 import { Download, FileText, TrendingUp, Package, Users, Phone, ClipboardList, Truck, BarChart3, Target } from 'lucide-react';
 import { reportsApi } from '../api/reports.api';
 import { format } from 'date-fns';
+import { drawHeader, drawFooter, PDF_CONFIG, PDF_COLORS } from '../utils/pdfLayout';
+import { getLogoBase64 } from '../utils/pdfLogo';
 
 const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#0ea5e9', '#84cc16'];
 const CHART_HEIGHT = 350;
@@ -302,28 +304,28 @@ export default function ReportsPage() {
     fetchReport();
   }, [fetchReport]);
 
-  const exportPDF = useCallback(() => {
+  const exportPDF = useCallback(async () => {
     const doc = new jsPDF();
     const tab = reportTabs.find((t) => t.id === activeReport);
-    let cursorY = 20;
+    const logo = await getLogoBase64();
+    const dateStr = format(new Date(), "dd/MM/yyyy HH:mm");
+    drawHeader(doc, `Reporte: ${tab?.label || activeReport}`, dateStr, logo ?? undefined);
 
-    doc.setFontSize(18);
-    doc.text(`Reporte: ${tab?.label || activeReport}`, 14, cursorY);
-    cursorY += 8;
-    doc.setFontSize(10);
-    doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, cursorY);
-    cursorY += 7;
+    let cursorY = PDF_CONFIG.headerHeight + 10;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.grayText);
     if (dateFrom || dateTo) {
-      doc.text(`Periodo: ${dateFrom || 'inicio'} - ${dateTo || 'hoy'}`, 14, cursorY);
-      cursorY += 7;
+      doc.text(`Periodo: ${dateFrom || 'inicio'} - ${dateTo || 'hoy'}`, PDF_CONFIG.margin, cursorY);
+      cursorY += 6;
     }
     cursorY += 4;
 
-    const pageW = 190;
+    const pageW = PDF_CONFIG.contentWidth;
     const chartH = 55;
 
-    // --- Draw charts per report type ---
-    const cx = (210 - pageW) / 2;
+    const cx = PDF_CONFIG.margin;
     if (activeReport === 'ventas') {
       if (data.byDay?.length > 0) {
         const pts = data.byDay.map((d: any) => ({ label: d.date.slice(5), values: [{ name: 'Total', value: Number(d.total), color: '#6366f1' }, { name: 'Transacciones', value: d.count, color: '#10b981' }] }));
@@ -388,7 +390,7 @@ export default function ReportsPage() {
       const columnStyles = colCfg?.styles;
       const tableWidth = colCfg?.tableWidth;
       const startY = Math.min(cursorY, doc.internal.pageSize.height - 30);
-      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 7, cellPadding: 1 }, headStyles: { fillColor: [99, 102, 241], fontSize: 7, cellPadding: 1 }, margin: { left: 10, right: 10 }, columnStyles };
+      const opts: any = { startY, head: [rows[0]!], body: rows.slice(1) as any, styles: { fontSize: 7, cellPadding: 1 }, headStyles: { fillColor: [...PDF_COLORS.primary], textColor: [...PDF_COLORS.white], fontSize: 7, cellPadding: 1 }, margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }, columnStyles };
       if (tableWidth) opts.tableWidth = tableWidth;
       if (startY + rows.length * 5 > doc.internal.pageSize.height - 20) {
         doc.addPage();
@@ -397,6 +399,7 @@ export default function ReportsPage() {
       autoTable(doc, opts);
     }
 
+    drawFooter(doc, `CasaVidal CRM · Reporte generado el ${format(new Date(), "dd/MM/yyyy HH:mm")}`);
     doc.save(`reporte-${activeReport}-${format(new Date(), 'yyyyMMdd')}.pdf`);
   }, [activeReport, dateFrom, dateTo, data]);
 

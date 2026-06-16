@@ -30,7 +30,7 @@ function getClientName(sale: Sale): string {
   return `${sale.client.firstName || ''} ${sale.client.lastName || ''}`.trim() || 'Sin nombre';
 }
 
-export function generateInvoicePDF(sale: Sale): void {
+export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
   const pdf = createPDFDocument();
 
   const dateStr = new Date(sale.createdAt).toLocaleDateString('es-VE', {
@@ -38,7 +38,7 @@ export function generateInvoicePDF(sale: Sale): void {
     hour: '2-digit', minute: '2-digit',
   });
 
-  drawHeader(pdf, `FACTURA ${sale.saleNumber}`, dateStr);
+  drawHeader(pdf, `FACTURA ${sale.saleNumber}`, dateStr, logoBase64);
 
   let yPos = 55;
   const infoGap = 6;

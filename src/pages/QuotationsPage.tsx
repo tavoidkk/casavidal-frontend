@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { generateQuotationPDF } from '../utils/generateQuotationPDF';
+import { getLogoBase64 } from '../utils/pdfLogo';
 import { staggerContainer, staggerItem } from '../utils/motion';
 
 export default function QuotationsPage() {
@@ -32,8 +33,9 @@ export default function QuotationsPage() {
     setIsDetailOpen(true);
   };
 
-  const handleGeneratePDF = (quotation: SavedQuotation) => {
+  const handleGeneratePDF = async (quotation: SavedQuotation) => {
     try {
+      const logoBase64 = await getLogoBase64();
       generateQuotationPDF({
         number: quotation.number,
         clientName: quotation.selectedClient.name,
@@ -47,6 +49,7 @@ export default function QuotationsPage() {
         discountAmount: quotation.discountAmount,
         total: quotation.total,
         createdAt: quotation.createdAt,
+        logoBase64: logoBase64 ?? undefined,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);

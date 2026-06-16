@@ -24,6 +24,7 @@ interface QuotationPDFData {
   total: number;
   notes?: string;
   createdAt?: string;
+  logoBase64?: string;
 }
 
 export function generateQuotationPDF(data: QuotationPDFData): void {
@@ -34,7 +35,7 @@ export function generateQuotationPDF(data: QuotationPDFData): void {
     ? new Date(data.createdAt).toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  drawHeader(pdf, `COTIZACIÓN ${cotNumber}`, dateStr);
+  drawHeader(pdf, `COTIZACIÓN ${cotNumber}`, dateStr, data.logoBase64);
 
   let yPos = 55;
   drawSectionLabel(pdf, yPos, 'DATOS DEL CLIENTE');
