@@ -10,6 +10,9 @@ export const PDF_COLORS = {
   lightGray: [241, 245, 249] as [number, number, number],
   grayText: [100, 116, 139] as [number, number, number],
   green: [22, 163, 74] as [number, number, number],
+  greenLight: [220, 252, 231] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+  redLight: [254, 226, 226] as [number, number, number],
   amber: [200, 124, 0] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
 };
@@ -275,6 +278,35 @@ export function drawDividerLine(pdf: jsPDF, y: number): void {
   pdf.setDrawColor(220, 220, 220);
   pdf.setLineWidth(0.3);
   pdf.line(PDF_CONFIG.margin, y, PDF_CONFIG.margin + PDF_CONFIG.contentWidth, y);
+}
+
+export function drawSectionNote(
+  pdf: jsPDF,
+  y: number,
+  title: string,
+  body: string,
+  accentColor?: [number, number, number]
+): number {
+  const leftX = PDF_CONFIG.margin;
+  const rightX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth;
+
+  pdf.setFillColor(...(accentColor ? (accentColor === PDF_COLORS.red ? PDF_COLORS.redLight : PDF_COLORS.greenLight) : PDF_COLORS.primaryLight));
+  pdf.rect(leftX, y - 4, PDF_CONFIG.contentWidth, 10, 'F');
+
+  pdf.setTextColor(...(accentColor ?? PDF_COLORS.primaryDark));
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(title, leftX + 3, y + 1);
+
+  const lines = pdf.splitTextToSize(body, PDF_CONFIG.contentWidth - 6);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...PDF_COLORS.grayText);
+  lines.forEach((line: string, i: number) => {
+    pdf.text(line, leftX + 3, y + 11 + i * 4);
+  });
+
+  return y + 12 + lines.length * 4;
 }
 
 export function drawFooter(pdf: jsPDF, text: string): void {

@@ -6,6 +6,7 @@ import {
   createItemsTable,
   drawTotalBox,
   drawDividerLine,
+  drawSectionNote,
   drawFooter,
   PDF_COLORS,
 } from './pdfLayout';
@@ -49,6 +50,11 @@ export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: stri
     `$${Number(item.subtotal).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
   ]);
   yPos = createItemsTable(pdf, yPos, [['Producto', 'SKU', 'Cant.', 'P. Unit.', 'Subtotal']], tableBody) + 10;
+
+  const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  yPos = drawSectionNote(pdf, yPos, 'RESUMEN',
+    `Orden de compra para reposicion de inventario. Se solicitan ${totalItems} ${totalItems === 1 ? 'producto' : 'productos'} por un total de $${Number(order.total).toFixed(2)}. Verificar fechas de entrega con el proveedor.`
+  );
 
   drawTotalBox(pdf, yPos, 'TOTAL:', `$${Number(order.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`);
 

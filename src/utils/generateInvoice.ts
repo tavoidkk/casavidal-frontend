@@ -7,6 +7,7 @@ import {
   drawSummaryLine,
   drawTotalBox,
   drawDividerLine,
+  drawSectionNote,
   drawFooter,
   PDF_COLORS,
   PDF_CONFIG,
@@ -90,6 +91,11 @@ export function generateInvoicePDF(sale: Sale, logoBase64?: string): void {
     yPos = drawInfoCard(pdf, yPos, 'PAGOS', paymentItems);
     drawDividerLine(pdf, yPos - 3);
   }
+
+  const itemCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+  yPos = drawSectionNote(pdf, yPos + 4, 'RESUMEN',
+    `Esta factura documenta la venta de ${itemCount} ${itemCount === 1 ? 'producto' : 'productos'} por un total de ${sale.currency === 'BS' ? formatBs(Number(sale.total)) : `$${Number(sale.total).toFixed(2)}`}. Agradecemos su preferencia y quedamos a su disposicion para cualquier consulta.`
+  );
 
   const isBs = sale.currency === 'BS';
   const totalValue = isBs

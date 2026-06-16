@@ -365,7 +365,8 @@ function drawChartCard(
   title: string,
   chartBodyH: number,
   drawContent: (d: jsPDF, cx: number, cy: number, cw: number, ch: number) => number,
-  insight?: string
+  insight?: string,
+  assessment?: { text: string; color: [number, number, number] }
 ): number {
   const headerH = 12;
   const pad = 6;
@@ -393,7 +394,23 @@ function drawChartCard(
     });
   }
 
-  const totalH = chartEndY - y + insightH + pad;
+  let totalH = chartEndY - y + insightH + pad;
+
+  if (assessment) {
+    const ay = y + totalH + 2;
+    const assessLines = doc.splitTextToSize(assessment.text, w - 16);
+    const assessH = assessLines.length * 4 + 6;
+    doc.setFillColor(...assessment.color);
+    doc.rect(x + 4, ay, 3, 3, 'F');
+    doc.setTextColor(...assessment.color);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    assessLines.forEach((line: string, i: number) => {
+      doc.text(line, x + 10, ay + 3 + i * 4);
+    });
+    totalH += assessH;
+  }
+
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.4);
   doc.rect(x, y, w, totalH, 'S');
@@ -401,71 +418,74 @@ function drawChartCard(
   return y + totalH + 8;
 }
 
-// ----- Insight text generators -----
+// ----- Insight text generators (descriptive + business impact) -----
 function buildDayInsight(data: any): string {
   if (!data.byDay?.length) return '';
   const max = data.byDay.reduce((best: any, d: any) => Number(d.total) > Number(best.total) ? d : best);
   const total = data.byDay.reduce((s: number, d: any) => s + Number(d.total), 0);
   const avg = total / data.byDay.length;
-  return `El día con mayor actividad fue ${max.date} con $${Number(max.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}. El promedio diario fue de $${avg.toFixed(2)}.`;
+  const count = data.byDay.reduce((s: number, d: any) => s + (d.count || 0), 0);
+  return `Durante el periodo se registraron ${count} transacciones por un total de $${total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}. El dia de mayor actividad fue ${max.date} con $${Number(max.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}, superando significativamente el promedio diario de $${avg.toFixed(2)}. Esto permite proyectar el flujo de caja y anticipar picos de demanda para una mejor gestion del capital de trabajo.`;
+}
+
+function buildDayAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byDay?.length || data.byDay.length < 3) return null;
+  const half = Math.floor(data.byDay.length / 2);
+  const firstHalfAvg = data.byDay.slice(0, half).reduce((s: number, d: any) => s + Number(d.total), 0) / half;
+  const secondHalfAvg = data.byDay.slice(half).reduce((s: number, d: any) => s + Number(d.total), 0) / (data.byDay.length - half);
+  const change = ((secondHalfAvg - firstHalfAvg) / (firstHalfAvg || 1)) * 100;
+  if (change > 5) return { text: `Tendencia de ventas positiva (${change > 0 ? '+' : ''}${change.toFixed(0)}%). El negocio muestra crecimiento sostenido.`, color: PDF_COLORS.green };
+  if (change < -5) return { text: `Tendencia de ventas decreciente (${change.toFixed(0)}%). Se recomienda revisar estrategia comercial y promociones.`, color: PDF_COLORS.red };
+  return { text: `Volumen de ventas estable (${change.toFixed(0)}%). Sin cambios significativos en el periodo.`, color: PDF_COLORS.amber };
 }
 
 function buildPaymentInsight(data: any): string {
   const methods = Object.entries(data.byPaymentMethod || {});
   if (!methods.length) return '';
-  const top = methods.sort((a: any, b: any) => Number(b[1]) - Number(a[1]))[0];
-  return `El metodo de pago mas utilizado fue "${top[0]}" con ${top[1]} transacciones.`;
+  const sorted = methods.sort((a: any, b: any) => Number(b[1]) - Number(a[1]));
+  const top = sorted[0];
+  const topPct = ((Number(top[1]) / methods.reduce((s, m) => s + Number(m[1]), 0)) * 100).toFixed(0);
+  return `Los clientes prefieren mayoritariamente "${top[0]}" como metodo de pago, concentrando el ${topPct}% de las transacciones. Conocer esta preferencia permite optimizar la gestion de cobranza y liquidez del negocio, ademas de identificar oportunidades para ofrecer beneficios especificos por medio de pago.`;
+}
+
+function buildPaymentAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  const methods = Object.entries(data.byPaymentMethod || {});
+  if (methods.length < 2) return null;
+  const topPct = Math.max(...methods.map((m) => Number(m[1]))) / methods.reduce((s, m) => s + Number(m[1]), 0) * 100;
+  if (topPct > 80) return { text: 'Alta concentracion en un solo metodo de pago. Diversificar reduce riesgo operativo.', color: PDF_COLORS.amber };
+  return { text: 'Distribucion de metodos de pago saludable. Menor dependencia de un solo canal.', color: PDF_COLORS.green };
 }
 
 function buildTopProductInsight(data: any): string {
   if (!data.products?.length) return '';
   const top = data.products[0];
-  return `"${top.name}" es el producto mas vendido con ${top.quantity} unidades y $${Number(top.revenue).toFixed(2)} en ingresos.`;
+  const total = data.products.reduce((s: number, p: any) => s + Number(p.revenue || 0), 0);
+  const pct = total > 0 ? ((Number(top.revenue) / total) * 100).toFixed(0) : '0';
+  return `El producto estrella del periodo es "${top.name}" con ${top.quantity} unidades vendidas y $${Number(top.revenue).toFixed(2)} en ingresos, representando el ${pct}% del total. Identificar los productos mas vendidos permite enfocar la estrategia de compras y marketing en lo que realmente genera demanda.`;
+}
+
+function buildTopProductAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.products?.length) return null;
+  const total = data.products.reduce((s: number, p: any) => s + Number(p.revenue || 0), 0);
+  if (!total) return null;
+  const topPct = (Number(data.products[0].revenue) / total) * 100;
+  if (topPct > 30) return { text: `Alta concentracion en un producto (${topPct.toFixed(0)}% de ingresos). Diversificar la cartera reduce riesgo.`, color: PDF_COLORS.amber };
+  return { text: `Cartera de productos equilibrada. El lider representa solo el ${topPct.toFixed(0)}% de los ingresos.`, color: PDF_COLORS.green };
 }
 
 function buildMarginInsight(data: any): string {
   if (!data.byCategory?.length) return '';
   const sorted = [...data.byCategory].sort((a: any, b: any) => Number(b.avgMargin) - Number(a.avgMargin));
-  return `"${sorted[0].name}" tiene el margen mas alto (${sorted[0].avgMargin}%), mientras que "${sorted[sorted.length - 1].name}" tiene el mas bajo (${sorted[sorted.length - 1].avgMargin}%).`;
+  const avg = sorted.reduce((s, c) => s + Number(c.avgMargin), 0) / sorted.length;
+  return `El margen de ganancia promedio del inventario es de ${avg.toFixed(0)}%. "${sorted[0].name}" destaca con el margen mas alto (${sorted[0].avgMargin}%), mientras que "${sorted[sorted.length - 1].name}" presenta el mas bajo (${sorted[sorted.length - 1].avgMargin}%). Monitorear estas diferencias permite ajustar precios y mejorar la rentabilidad global del negocio.`;
 }
 
-function buildSegmentInsight(data: any, key: string): string {
-  const src = data[key] || [];
-  if (!src.length || !src[0]?.count) return '';
-  const top = src.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
-  return `"${top.name}" es el segmento mas representativo con ${top.count} registros.`;
-}
-
-function buildActivityTypeInsight(data: any): string {
-  if (!data.byType?.length) return '';
-  const top = data.byType.reduce((best: any, t: any) => Number(t.count) > Number(best.count) ? t : best);
-  return `El tipo de actividad mas frecuente es "${top.name}" con ${top.count} registros.`;
-}
-
-function buildUserInsight(data: any): string {
-  if (!data.users?.length) return '';
-  const top = data.users.reduce((best: any, u: any) => Number(u.activities || 0) > Number(best.activities || 0) ? u : best);
-  return `${top.name} fue el usuario mas activo con ${top.activities} actividades y ${top.sales} ventas.`;
-}
-
-function buildStatusInsight(data: any): string {
-  if (!data.byStatus?.length) return '';
-  const top = data.byStatus.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
-  return `La mayoria de los pedidos estan en estado "${top.name}" (${top.count} registros).`;
-}
-
-function buildRatingInsight(data: any): string {
-  if (!data.byRating?.length) return '';
-  const totalVal = data.byRating.reduce((s: number, r: any) => s + Number(r.value) * Number(r.count), 0);
-  const totalCount = data.byRating.reduce((s: number, r: any) => s + Number(r.count), 0);
-  if (!totalCount) return '';
-  return `La calificacion promedio de proveedores es de ${(totalVal / totalCount).toFixed(1)} estrellas.`;
-}
-
-function buildProductivityInsight(data: any): string {
-  if (!data.users?.length) return '';
-  const best = data.users.reduce((b: any, u: any) => Number(u.sales || 0) > Number(b.sales || 0) ? u : b);
-  return `${best.name} lidera en ventas con ${best.sales} transacciones. Revise el detalle completo en la tabla.`;
+function buildMarginAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byCategory?.length) return null;
+  const avg = data.byCategory.reduce((s: number, c: any) => s + Number(c.avgMargin), 0) / data.byCategory.length;
+  if (avg > 30) return { text: `Margen promedio saludable (${avg.toFixed(0)}%). La rentabilidad del negocio es solida.`, color: PDF_COLORS.green };
+  if (avg > 15) return { text: `Margen promedio aceptable (${avg.toFixed(0)}%). Revisar categorias de bajo rendimiento para mejorar.`, color: PDF_COLORS.amber };
+  return { text: `Margen promedio bajo (${avg.toFixed(0)}%). Urge revisar estructura de costos y precios de venta.`, color: PDF_COLORS.red };
 }
 
 function buildCategoryInsight(data: any): string {
@@ -473,7 +493,138 @@ function buildCategoryInsight(data: any): string {
   const src = data.byCategory;
   const key = src[0]?.stockValue !== undefined ? 'stockValue' : src[0]?.avgMargin !== undefined ? 'avgMargin' : 'count';
   const top = src.reduce((best: any, c: any) => Number(c[key]) > Number(best[key]) ? c : best);
-  return `"${top.name}" lidera la categoria con ${fmtLarge(top[key])} en valor.`;
+  const total = src.reduce((s: number, c: any) => s + Number(c[key]), 0);
+  const pct = total > 0 ? ((Number(top[key]) / total) * 100).toFixed(0) : '0';
+  return `"${top.name}" lidera con ${fmtLarge(top[key])} en valor, representando el ${pct}% del total. Una distribucion equilibrada entre categorias reduce el riesgo de desabastecimiento y optimiza el capital de trabajo, permitiendo una gestion de inventario mas eficiente.`;
+}
+
+function buildCategoryAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byCategory?.length) return null;
+  const src = data.byCategory;
+  const key = src[0]?.stockValue !== undefined ? 'stockValue' : 'count';
+  const total = src.reduce((s: number, c: any) => s + Number(c[key]), 0);
+  if (!total) return null;
+  const topPct = (Number(src[0][key]) / total) * 100;
+  if (topPct > 50) return { text: `Alta concentracion en "${src[0].name}" (${topPct.toFixed(0)}%). Monitorear para evitar riesgo de sobrestock.`, color: PDF_COLORS.amber };
+  return { text: `Distribucion de inventario equilibrada entre categorias. Gestion de stock saludable.`, color: PDF_COLORS.green };
+}
+
+function buildSegmentInsight(data: any, key: string, label: string): string {
+  const src = data[key] || [];
+  if (!src.length || !src[0]?.count) return '';
+  const top = src.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
+  const total = src.reduce((s: number, c: any) => s + Number(c.count), 0);
+  const pct = ((Number(top.count) / total) * 100).toFixed(0);
+  return `El segmento "${top.name}" agrupa la mayor cantidad de clientes (${top.count} registros, ${pct}% del total). Conocer la distribucion por ${label} permite enfocar esfuerzos de marketing y retencion donde hay mayor concentracion, maximizando el retorno de las acciones comerciales.`;
+}
+
+function buildSegmentAssessment(data: any, key: string): { text: string; color: [number, number, number] } | null {
+  const src = data[key] || [];
+  if (!src.length) return null;
+  const total = src.reduce((s: number, c: any) => s + Number(c.count), 0);
+  if (!total) return null;
+  const topPct = (Number(src[0].count) / total) * 100;
+  if (topPct > 60) return { text: `Alta concentracion en "${src[0].name}" (${topPct.toFixed(0)}%). Diversificar base de clientes reduce dependencia.`, color: PDF_COLORS.amber };
+  return { text: `Base de ${key === 'bySource' ? 'origenes' : 'segmentos'} diversificada. Distribucion saludable de clientes.`, color: PDF_COLORS.green };
+}
+
+function buildActivityTypeInsight(data: any): string {
+  if (!data.byType?.length) return '';
+  const top = data.byType.reduce((best: any, t: any) => Number(t.count) > Number(best.count) ? t : best);
+  const total = data.byType.reduce((s: number, t: any) => s + Number(t.count), 0);
+  const pct = ((Number(top.count) / total) * 100).toFixed(0);
+  return `Las actividades del tipo "${top.name}" son las mas frecuentes (${top.count} registros, ${pct}% del total). Esto refleja la dinamica operativa del equipo CRM. Identificar los tipos de actividad predominantes permite asignar recursos y tiempo de manera mas eficiente para maximizar la productividad del equipo.`;
+}
+
+function buildActivityTypeAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byType?.length) return null;
+  const total = data.byType.reduce((s: number, t: any) => s + Number(t.count), 0);
+  if (!total) return null;
+  const topPct = (Number(data.byType[0].count) / total) * 100;
+  if (topPct > 60) return { text: `Un solo tipo de actividad domina el flujo de trabajo (${topPct.toFixed(0)}%). Evaluar si refleja la prioridad correcta.`, color: PDF_COLORS.amber };
+  return { text: `Distribucion de actividades equilibrada. El equipo aborda multiples tareas de forma balanceada.`, color: PDF_COLORS.green };
+}
+
+function buildUserInsight(data: any): string {
+  if (!data.users?.length) return '';
+  const top = data.users.reduce((best: any, u: any) => Number(u.activities || 0) > Number(best.activities || 0) ? u : best);
+  const totalActs = data.users.reduce((s: number, u: any) => s + Number(u.activities || 0), 0);
+  const pct = totalActs > 0 ? ((Number(top.activities) / totalActs) * 100).toFixed(0) : '0';
+  return `${top.name} lidera la actividad del equipo con ${top.activities} acciones (${pct}% del total) y ${top.sales} ventas concretadas. Reconocer a los colaboradores mas productivos fomenta una cultura de alto rendimiento y permite identificar practicas exitosas que pueden replicarse en el resto del equipo.`;
+}
+
+function buildUserAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.users?.length) return null;
+  const totalActs = data.users.reduce((s: number, u: any) => s + Number(u.activities || 0), 0);
+  if (!totalActs) return null;
+  const topPct = (Number(data.users[0].activities || 0) / totalActs) * 100;
+  if (topPct > 50) return { text: `Alta dependencia en "${data.users[0].name}" (${topPct.toFixed(0)}% de la carga). Distribuir tareas reduce riesgo operativo.`, color: PDF_COLORS.amber };
+  return { text: `Carga de trabajo distribuida entre el equipo. No hay dependencia excesiva en un solo colaborador.`, color: PDF_COLORS.green };
+}
+
+function buildStatusInsight(data: any): string {
+  if (!data.byStatus?.length) return '';
+  const top = data.byStatus.reduce((best: any, s: any) => Number(s.count) > Number(best.count) ? s : best);
+  const total = data.byStatus.reduce((s: number, st: any) => s + Number(st.count), 0);
+  const pct = ((Number(top.count) / total) * 100).toFixed(0);
+  return `La mayoria de los pedidos se encuentran en estado "${top.name}" (${top.count} registros, ${pct}% del total). Analizar la distribucion por estado permite identificar cuellos de botella en el proceso logistico y tomar acciones para agilizar los tiempos de entrega al cliente final.`;
+}
+
+function buildStatusAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byStatus?.length) return null;
+  const pendingKeywords = ['pendiente', 'en proceso', 'procesando', 'espera'];
+  const doneKeywords = ['completado', 'entregado', 'finalizado', 'cerrado'];
+  const pendingCount = data.byStatus.filter((s: any) => pendingKeywords.some((k) => s.name?.toLowerCase().includes(k)))
+    .reduce((sum: number, s: any) => sum + Number(s.count), 0);
+  const doneCount = data.byStatus.filter((s: any) => doneKeywords.some((k) => s.name?.toLowerCase().includes(k)))
+    .reduce((sum: number, s: any) => sum + Number(s.count), 0);
+  const total = data.byStatus.reduce((s: number, st: any) => s + Number(st.count), 0);
+  if (!total) return null;
+  const pendingPct = (pendingCount / total) * 100;
+  const donePct = (doneCount / total) * 100;
+  if (pendingPct > 30) return { text: `Alto volumen de pedidos pendientes (${pendingPct.toFixed(0)}%). Revisar proceso logístico para agilizar entregas.`, color: PDF_COLORS.red };
+  if (donePct > 70) return { text: `Buena tasa de resolucion (${donePct.toFixed(0)}% completados). Proceso logístico eficiente.`, color: PDF_COLORS.green };
+  return { text: `Distribucion de pedidos dentro de parametros normales. Sin novedades relevantes.`, color: PDF_COLORS.amber };
+}
+
+function buildRatingInsight(data: any): string {
+  if (!data.byRating?.length) return '';
+  const totalVal = data.byRating.reduce((s: number, r: any) => s + Number(r.value) * Number(r.count), 0);
+  const totalCount = data.byRating.reduce((s: number, r: any) => s + Number(r.count), 0);
+  if (!totalCount) return '';
+  const avg = (totalVal / totalCount);
+  return `La calificacion promedio de los proveedores es de ${avg.toFixed(1)} estrellas. Mantener relaciones con proveedores bien calificados garantiza calidad, cumplimiento en las entregas y mejores condiciones comerciales, lo que impacta directamente en la satisfaccion de los clientes finales de la ferreteria.`;
+}
+
+function buildRatingAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.byRating?.length) return null;
+  const totalVal = data.byRating.reduce((s: number, r: any) => s + Number(r.value) * Number(r.count), 0);
+  const totalCount = data.byRating.reduce((s: number, r: any) => s + Number(r.count), 0);
+  if (!totalCount) return null;
+  const avg = totalVal / totalCount;
+  if (avg >= 4) return { text: `Proveedores con excelente calificacion (${avg.toFixed(1)} estrellas). Relaciones comerciales solidas.`, color: PDF_COLORS.green };
+  if (avg >= 3) return { text: `Calificacion aceptable (${avg.toFixed(1)} estrellas). Oportunidad de mejora en relacion con proveedores.`, color: PDF_COLORS.amber };
+  return { text: `Baja calificacion de proveedores (${avg.toFixed(1)} estrellas). Revisar relaciones comerciales y buscar alternativas.`, color: PDF_COLORS.red };
+}
+
+function buildProductivityInsight(data: any): string {
+  if (!data.users?.length) return '';
+  const best = data.users.reduce((b: any, u: any) => Number(u.sales || 0) > Number(b.sales || 0) ? u : b);
+  const totalSales = data.users.reduce((s: number, u: any) => s + Number(u.sales || 0), 0);
+  const totalActs = data.users.reduce((s: number, u: any) => s + Number(u.activities || 0), 0);
+  const avgSales = totalSales / data.users.length;
+  return `${best.name} lidera en ventas con ${best.sales} transacciones, superando el promedio del equipo de ${avgSales.toFixed(1)}. En total el equipo realizo ${totalActs} actividades y ${totalSales} ventas en el periodo. Analizar las practicas de los colaboradores mas destacados permite replicar su exito y elevar el rendimiento general del equipo comercial.`;
+}
+
+function buildProductivityAssessment(data: any): { text: string; color: [number, number, number] } | null {
+  if (!data.users?.length) return null;
+  const totalSales = data.users.reduce((s: number, u: any) => s + Number(u.sales || 0), 0);
+  if (!totalSales) return null;
+  const avgSales = totalSales / data.users.length;
+  const maxSales = Math.max(...data.users.map((u: any) => Number(u.sales || 0)));
+  const ratio = avgSales > 0 ? maxSales / avgSales : 1;
+  if (ratio > 2.5) return { text: `Alta variabilidad en ventas (el lider vende ${ratio.toFixed(1)}x el promedio). Oportunidad de coaching para el equipo.`, color: PDF_COLORS.amber };
+  return { text: 'Rendimiento del equipo equilibrado. Buen nivel de productividad general.', color: PDF_COLORS.green };
 }
 
 interface ReportTab { id: string; label: string; icon: any; group: string }
@@ -588,7 +739,8 @@ export default function ReportsPage() {
         const pts = data.byDay.map((d: any) => ({ label: d.date.slice(5), values: [{ name: 'Total', value: Number(d.total), color: '#6366f1' }, { name: 'Transacciones', value: d.count, color: '#10b981' }] }));
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Tendencia diaria', 48,
           (d, cx2, cy2, cw2, ch2) => drawLineChart(d, pts, cx2, cy2, cw2, ch2),
-          buildDayInsight(data)
+          buildDayInsight(data),
+          buildDayAssessment(data)
         );
       }
       if (data.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0) {
@@ -596,7 +748,8 @@ export default function ReportsPage() {
         const items = Object.entries(data.byPaymentMethod).map(([k, v]) => ({ name: k, value: Number(v) }));
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por metodo de pago', items.length * 17 + 10,
           (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, items, cx2, cy2, cw2, ch2),
-          buildPaymentInsight(data)
+          buildPaymentInsight(data),
+          buildPaymentAssessment(data)
         );
       }
     }
@@ -606,7 +759,8 @@ export default function ReportsPage() {
       const items = data.byCategory.map((c: any) => ({ label: c.name, values: [{ name: 'Valor Inventario', value: Number(c.stockValue), color: '#6366f1' }, { name: 'Productos', value: c.count, color: '#10b981' }] }));
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Valor de inventario por categoria', 48,
         (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-        buildCategoryInsight(data)
+        buildCategoryInsight(data),
+        buildCategoryAssessment(data)
       );
     }
 
@@ -615,21 +769,24 @@ export default function ReportsPage() {
         if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por categoria', data.byCategory.length * 17 + 10,
           (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byCategory, cx2, cy2, cw2, ch2),
-          buildSegmentInsight(data, 'byCategory')
+          buildSegmentInsight(data, 'byCategory', 'categoria'),
+          buildSegmentAssessment(data, 'byCategory')
         );
       }
       if (data.byStage?.length > 0) {
         if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por etapa', data.byStage.length * 17 + 10,
           (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byStage, cx2, cy2, cw2, ch2),
-          buildSegmentInsight(data, 'byStage')
+          buildSegmentInsight(data, 'byStage', 'etapa'),
+          buildSegmentAssessment(data, 'byStage')
         );
       }
       if (data.bySource?.length > 0) {
         if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por fuente', data.bySource.length * 17 + 10,
           (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.bySource, cx2, cy2, cw2, ch2),
-          buildSegmentInsight(data, 'bySource')
+          buildSegmentInsight(data, 'bySource', 'fuente'),
+          buildSegmentAssessment(data, 'bySource')
         );
       }
     }
@@ -641,7 +798,8 @@ export default function ReportsPage() {
         const items = data.byType.map((t: any) => ({ label: t.name, values: [{ name: 'Count', value: t.count, color: '#6366f1' }] }));
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por tipo', ch,
           (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-          buildActivityTypeInsight(data)
+          buildActivityTypeInsight(data),
+          buildActivityTypeAssessment(data)
         );
       }
       if (data.byUser?.length > 0) {
@@ -649,7 +807,8 @@ export default function ReportsPage() {
         const items = data.byUser.map((u: any) => ({ label: u.name, values: [{ name: 'Total', value: u.count, color: '#6366f1' }, { name: 'Completadas', value: u.completed, color: '#10b981' }] }));
         cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por usuario', ch,
           (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-          buildUserInsight(data)
+          buildUserInsight(data),
+          buildUserAssessment(data)
         );
       }
     }
@@ -659,7 +818,8 @@ export default function ReportsPage() {
       const items = data.products.slice(0, 10).map((p: any) => ({ label: p.name, values: [{ name: 'Ingresos', value: Number(p.revenue), color: '#6366f1' }, { name: 'Cantidad', value: p.quantity, color: '#10b981' }] }));
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Top productos por ingresos', 48,
         (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-        buildTopProductInsight(data)
+        buildTopProductInsight(data),
+        buildTopProductAssessment(data)
       );
     }
 
@@ -668,7 +828,8 @@ export default function ReportsPage() {
       const items = data.byCategory.map((c: any) => ({ label: c.name, values: [{ name: 'Margen %', value: Number(c.avgMargin), color: '#6366f1' }] }));
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Margen promedio por categoria', 48,
         (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-        buildMarginInsight(data)
+        buildMarginInsight(data),
+        buildMarginAssessment(data)
       );
     }
 
@@ -677,7 +838,8 @@ export default function ReportsPage() {
       const items = data.byStatus.map((s: any) => ({ label: s.name, values: [{ name: 'Pedidos', value: s.count, color: '#6366f1' }] }));
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Por estado', 48,
         (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-        buildStatusInsight(data)
+        buildStatusInsight(data),
+        buildStatusAssessment(data)
       );
     }
 
@@ -686,7 +848,8 @@ export default function ReportsPage() {
       const items = data.users.map((u: any) => ({ label: u.name, values: [{ name: 'Actividades', value: u.activities, color: '#6366f1' }, { name: 'Completadas', value: u.completedActivities, color: '#10b981' }, { name: 'Ventas', value: u.sales, color: '#f59e0b' }] }));
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Comparativa del equipo', 48,
         (d, cx2, cy2, cw2, ch2) => drawBarChart(d, items, cx2, cy2, cw2, ch2),
-        buildProductivityInsight(data)
+        buildProductivityInsight(data),
+        buildProductivityAssessment(data)
       );
     }
 
@@ -694,7 +857,8 @@ export default function ReportsPage() {
       if (cursorY + 85 > pageBottom) { doc.addPage(); cursorY = 14; }
       cursorY = drawChartCard(doc, cx, cursorY, pageW, 'Distribucion por rating', data.byRating.length * 17 + 10,
         (d, cx2, cy2, cw2, ch2) => drawPieAsBars(d, data.byRating, cx2, cy2, cw2, ch2),
-        buildRatingInsight(data)
+        buildRatingInsight(data),
+        buildRatingAssessment(data)
       );
     }
 

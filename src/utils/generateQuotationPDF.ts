@@ -7,6 +7,7 @@ import {
   drawSummaryLine,
   drawTotalBox,
   drawDividerLine,
+  drawSectionNote,
   drawFooter,
 } from './pdfLayout';
 
@@ -57,6 +58,11 @@ export function generateQuotationPDF(data: QuotationPDFData): void {
     `$${item.subtotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`,
   ]);
   yPos = createItemsTable(pdf, yPos, [['Producto', 'Código', 'Cant.', 'P. Unit.', 'Subtotal']], tableBody) + 10;
+
+  const totalItems = data.items.reduce((sum, item) => sum + item.quantity, 0);
+  yPos = drawSectionNote(pdf, yPos, 'RESUMEN',
+    `Esta cotizacion incluye ${totalItems} ${totalItems === 1 ? 'producto' : 'productos'} con un subtotal de $${data.subtotal.toFixed(2)}. Los precios estan expresados en dolares americanos e incluyen el IVA correspondiente. Valida por 7 dias a partir de la fecha de emision.`
+  );
 
   drawSummaryLine(pdf, yPos, 'Subtotal:', `$${data.subtotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`);
   yPos += 5;
