@@ -76,4 +76,34 @@ export const excelApi = {
     });
     return response.data.data;
   },
+
+  /**
+   * Descargar plantilla de productos
+   */
+  async downloadProductsTemplate(): Promise<Blob> {
+    const response = await api.get('/excel/template/products', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * Descargar plantilla de clientes
+   */
+  async downloadClientsTemplate(): Promise<Blob> {
+    const response = await api.get('/excel/template/clients', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * Descargar plantilla de proveedores
+   */
+  async downloadSuppliersTemplate(): Promise<Blob> {
+    const response = await api.get('/excel/template/suppliers', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };

@@ -414,7 +414,7 @@ export interface ActivityUpdate {
 }
 
 // Settings
-export type Currency = 'CLP' | 'USD' | 'EUR' | 'ARS' | 'MXN' | 'COP' | 'PEN' | 'BRL';
+export type Currency = 'USD' | 'EUR';
 
 export interface Settings {
   id: string;

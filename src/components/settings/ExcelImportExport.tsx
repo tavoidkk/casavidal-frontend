@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { FileSpreadsheet, Download, Upload, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { FileSpreadsheet, FileDown, Download, Upload, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { excelApi } from '../../api/excel.api';
@@ -8,6 +8,7 @@ type ImportType = 'products' | 'clients' | 'suppliers';
 
 export default function ExcelImportExport() {
   const [loading, setLoading] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
   const [importType, setImportType] = useState<ImportType>('products');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -87,6 +88,48 @@ export default function ExcelImportExport() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadTemplate = async (type: ImportType) => {
+    setTemplateLoading(true);
+    setMessage(null);
+
+    try {
+      let blob: Blob;
+      let filename: string;
+
+      switch (type) {
+        case 'products':
+          blob = await excelApi.downloadProductsTemplate();
+          filename = 'plantilla-productos.xlsx';
+          break;
+        case 'clients':
+          blob = await excelApi.downloadClientsTemplate();
+          filename = 'plantilla-clientes.xlsx';
+          break;
+        case 'suppliers':
+          blob = await excelApi.downloadSuppliersTemplate();
+          filename = 'plantilla-proveedores.xlsx';
+          break;
+      }
+
+      const url = window.URL.createObjectURL(blob!);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename!;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error al descargar plantilla:', error);
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Error al descargar la plantilla',
+      });
+    } finally {
+      setTemplateLoading(false);
     }
   };
 
@@ -191,6 +234,45 @@ export default function ExcelImportExport() {
                 >
                   <FileSpreadsheet className="w-4 h-4" />
                   Exportar Proveedores
+                </Button>
+              </div>
+
+              <hr className="my-4 border-gray-200" />
+
+              <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                Plantillas vacías para importación
+              </h4>
+              <p className="text-sm text-gray-500 mb-3">
+                Descarga el formato correcto con ejemplos para agregar datos masivamente.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button
+                  onClick={() => handleDownloadTemplate('products')}
+                  isLoading={templateLoading}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Plantilla Productos
+                </Button>
+                <Button
+                  onClick={() => handleDownloadTemplate('clients')}
+                  isLoading={templateLoading}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Plantilla Clientes
+                </Button>
+                <Button
+                  onClick={() => handleDownloadTemplate('suppliers')}
+                  isLoading={templateLoading}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Plantilla Proveedores
                 </Button>
               </div>
             </div>

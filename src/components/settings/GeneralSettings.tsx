@@ -274,14 +274,8 @@ export default function GeneralSettings() {
   }
 
   const currencies: { value: Currency; label: string; symbol: string }[] = [
-    { value: 'CLP', label: 'Peso Chileno', symbol: '$' },
     { value: 'USD', label: 'Dólar Americano', symbol: '$' },
     { value: 'EUR', label: 'Euro', symbol: '€' },
-    { value: 'ARS', label: 'Peso Argentino', symbol: '$' },
-    { value: 'MXN', label: 'Peso Mexicano', symbol: '$' },
-    { value: 'COP', label: 'Peso Colombiano', symbol: '$' },
-    { value: 'PEN', label: 'Sol Peruano', symbol: 'S/' },
-    { value: 'BRL', label: 'Real Brasileño', symbol: 'R$' },
   ];
 
   return (
