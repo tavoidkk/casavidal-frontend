@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator } from 'lucide-react';
+import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator, RefreshCw } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 import { useCurrencyStore } from '../../store/currency.store';
 import type { Settings, Currency, UpdateSettingsInput } from '../../types';
@@ -17,6 +17,7 @@ export default function GeneralSettings() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [newLogo, setNewLogo] = useState<File | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
+  const [refreshingRate, setRefreshingRate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -187,6 +188,29 @@ export default function GeneralSettings() {
       showToast('error', error.response?.data?.error || 'Error al restaurar la configuración');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRefreshRate = async () => {
+    setRefreshingRate(true);
+    try {
+      const result = await settingsApi.refreshRate();
+      setForm(prev => ({ ...prev, usdToBsRate: result.usdToBsRate }));
+      setSettings(prev =>
+        prev ? { ...prev, usdToBsRate: result.usdToBsRate, usdToBsUpdatedAt: result.usdToBsUpdatedAt } : prev
+      );
+      setHasChanges(false);
+      await loadRate();
+      const formatted = result.usdToBsRate.toLocaleString('es-VE', { minimumFractionDigits: 4 });
+      showToast('success', `Tasa actualizada desde BDV: 1 USD = Bs. ${formatted}`);
+    } catch (error: any) {
+      console.error('Error refreshing rate from BDV:', error);
+      const message =
+        error.response?.data?.error ||
+        'No se pudo obtener la tasa del Banco de Venezuela. Puedes ingresarla manualmente.';
+      showToast('error', message);
+    } finally {
+      setRefreshingRate(false);
     }
   };
 
@@ -401,10 +425,20 @@ export default function GeneralSettings() {
                 onClick={() => handleInputChange('usdToBsRate', null)}
                 className="px-3 py-2 text-sm text-gray-500 hover:text-red-600 border border-gray-300 rounded-lg hover:bg-red-50"
                 title="Limpiar tasa"
+                disabled={refreshingRate}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+            <button
+              type="button"
+              onClick={handleRefreshRate}
+              disabled={refreshingRate || submitting}
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshingRate ? 'animate-spin' : ''}`} />
+              {refreshingRate ? 'Obteniendo tasa...' : 'Actualizar desde BDV'}
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Última Actualización</label>

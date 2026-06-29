@@ -34,6 +34,17 @@ export const settingsApi = {
   },
 
   /**
+   * POST /api/settings/rate/refresh
+   * Consultar el API del Banco de Venezuela, obtener la tasa USD -> Bs
+   * y persistirla en la configuración del sistema.
+   * Solo accesible por ADMIN.
+   */
+  async refreshRate(): Promise<{ usdToBsRate: number; usdToBsUpdatedAt: string | null; source: string }> {
+    const response = await api.post<ApiResponse<{ usdToBsRate: number; usdToBsUpdatedAt: string | null; source: string }>>('/settings/rate/refresh');
+    return response.data.data;
+  },
+
+  /**
    * Actualizar configuración del sistema
    * Solo accesible por ADMIN
    */
