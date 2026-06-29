@@ -314,3 +314,57 @@ export function drawFooter(pdf: jsPDF, text: string): void {
   pdf.setFontSize(8);
   pdf.text(text, PDF_CONFIG.margin, pdf.internal.pageSize.getHeight() - 15, { maxWidth: PDF_CONFIG.contentWidth });
 }
+
+/**
+ * Dibuja un recuadro con la firma digital de la empresa al final del PDF.
+ * Centrado horizontalmente, con etiqueta "Firma Autorizada" debajo.
+ * Si no hay suficiente espacio en la página actual, agrega una nueva.
+ * Retorna la nueva posición Y después del bloque.
+ */
+export function drawSignature(pdf: jsPDF, y: number, signatureBase64: string): number {
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const blockHeight = 38;
+  if (y + blockHeight > pageHeight - 25) {
+    pdf.addPage();
+    y = PDF_CONFIG.margin + 10;
+  }
+
+  const centerX = PDF_CONFIG.margin + PDF_CONFIG.contentWidth / 2;
+  const maxWidth = 60;
+  const maxHeight = 22;
+
+  let imgWidth = maxWidth;
+  let imgHeight = maxHeight;
+  try {
+    const props = pdf.getImageProperties(signatureBase64);
+    if (props && props.width && props.height) {
+      const ratio = props.width / props.height;
+      if (imgWidth / ratio <= maxHeight) {
+        imgHeight = imgWidth / ratio;
+      } else {
+        imgHeight = maxHeight;
+        imgWidth = imgHeight * ratio;
+      }
+    }
+  } catch {
+    // mantener dimensiones por defecto
+  }
+
+  const imgX = centerX - imgWidth / 2;
+  const imgY = y;
+  pdf.addImage(signatureBase64, 'PNG', imgX, imgY, imgWidth, imgHeight);
+
+  const lineY = imgY + imgHeight + 3;
+  const lineX1 = centerX - 35;
+  const lineX2 = centerX + 35;
+  pdf.setDrawColor(100, 116, 139);
+  pdf.setLineWidth(0.3);
+  pdf.line(lineX1, lineY, lineX2, lineY);
+
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...PDF_COLORS.grayText);
+  pdf.text('Firma Autorizada', centerX, lineY + 4, { align: 'center' });
+
+  return lineY + 8;
+}

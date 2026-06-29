@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { generateQuotationPDF } from '../utils/generateQuotationPDF';
 import { getLogoBase64 } from '../utils/pdfLogo';
+import { getSignatureBase64 } from '../utils/pdfSignature';
 import { staggerContainer, staggerItem } from '../utils/motion';
 
 export default function QuotationsPage() {
@@ -35,7 +36,10 @@ export default function QuotationsPage() {
 
   const handleGeneratePDF = async (quotation: SavedQuotation) => {
     try {
-      const logoBase64 = await getLogoBase64();
+      const [logoBase64, signatureBase64] = await Promise.all([
+        getLogoBase64(),
+        getSignatureBase64(),
+      ]);
       generateQuotationPDF({
         number: quotation.number,
         clientName: quotation.selectedClient.name,
@@ -50,6 +54,7 @@ export default function QuotationsPage() {
         total: quotation.total,
         createdAt: quotation.createdAt,
         logoBase64: logoBase64 ?? undefined,
+        signatureBase64: signatureBase64 ?? undefined,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);

@@ -9,6 +9,7 @@ import {
   drawDividerLine,
   drawSectionNote,
   drawFooter,
+  drawSignature,
 } from './pdfLayout';
 
 interface QuotationPDFData {
@@ -26,6 +27,7 @@ interface QuotationPDFData {
   notes?: string;
   createdAt?: string;
   logoBase64?: string;
+  signatureBase64?: string;
 }
 
 export function generateQuotationPDF(data: QuotationPDFData): void {
@@ -83,6 +85,11 @@ export function generateQuotationPDF(data: QuotationPDFData): void {
   }
 
   drawTotalBox(pdf, yPos, 'TOTAL:', `$${data.total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`);
+
+  if (data.signatureBase64) {
+    yPos += 12;
+    yPos = drawSignature(pdf, yPos, data.signatureBase64);
+  }
 
   drawFooter(pdf, 'Esta cotización tiene validez de 7 días. Válido únicamente para los datos especificados arriba.');
 

@@ -424,6 +424,7 @@ export interface Settings {
   companyPhone?: string | null;
   companyAddress?: string | null;
   companyLogo?: string | null;
+  signatureUrl?: string | null;
   
   // Configuración financiera
   currency: Currency;
@@ -542,6 +543,7 @@ export interface UpdateSettingsInput {
   companyPhone?: string | null;
   companyAddress?: string | null;
   companyLogo?: string | null;
+  signatureUrl?: string | null;
   
   // Configuración financiera
   currency?: Currency;

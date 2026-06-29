@@ -2,6 +2,7 @@ import { useQuotationStore } from '../../store/quotations.store';
 import type { QuotationData } from '../../api/quotations.api';
 import { generateQuotationPDF } from '../../utils/generateQuotationPDF';
 import { getLogoBase64 } from '../../utils/pdfLogo';
+import { getSignatureBase64 } from '../../utils/pdfSignature';
 
 interface QuotationPDFProps {
   quotation?: QuotationData;
@@ -12,7 +13,10 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation }) => {
     useQuotationStore();
 
   const handleGeneratePDF = async () => {
-    const logoBase64 = await getLogoBase64();
+    const [logoBase64, signatureBase64] = await Promise.all([
+      getLogoBase64(),
+      getSignatureBase64(),
+    ]);
     const clientInfo = quotation
       ? { name: quotation.clientName, phone: quotation.clientPhone, email: quotation.clientEmail }
       : selectedClient;
@@ -38,6 +42,7 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation }) => {
       total: finalTotal,
       createdAt: quotation?.createdAt,
       logoBase64: logoBase64 ?? undefined,
+      signatureBase64: signatureBase64 ?? undefined,
     });
   };
 

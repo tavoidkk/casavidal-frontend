@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator, RefreshCw } from 'lucide-react';
+import { Building2, DollarSign, Package, Bell, Globe, RotateCcw, Save, Upload, X, Image, Calculator, RefreshCw, PenLine, Trash2 } from 'lucide-react';
 import { settingsApi } from '../../api/settings.api';
 import { useCurrencyStore } from '../../store/currency.store';
 import type { Settings, Currency, UpdateSettingsInput } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { SignaturePad, type SignaturePadHandle } from './SignaturePad';
+import { clearSignatureCache } from '../../utils/pdfSignature';
 
 export default function GeneralSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -18,6 +20,10 @@ export default function GeneralSettings() {
   const [newLogo, setNewLogo] = useState<File | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
   const [refreshingRate, setRefreshingRate] = useState(false);
+  const [signatureMode, setSignatureMode] = useState<'idle' | 'editing'>('idle');
+  const [savingSignature, setSavingSignature] = useState(false);
+  const [removingSignature, setRemovingSignature] = useState(false);
+  const signaturePadRef = useRef<SignaturePadHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -214,6 +220,51 @@ export default function GeneralSettings() {
     }
   };
 
+  const handleSaveSignature = async () => {
+    const pad = signaturePadRef.current;
+    if (!pad || pad.isEmpty()) {
+      showToast('error', 'Dibuja la firma antes de guardar');
+      return;
+    }
+    setSavingSignature(true);
+    try {
+      const trimmedCanvas = pad.getTrimmedCanvas();
+      const dataUrl = trimmedCanvas.toDataURL('image/png');
+      const blob = await (await fetch(dataUrl)).blob();
+      const url = await settingsApi.uploadSignature(blob);
+      clearSignatureCache();
+      setSettings(prev => (prev ? { ...prev, signatureUrl: url } : prev));
+      setSignatureMode('idle');
+      showToast('success', 'Firma digital guardada exitosamente');
+    } catch (error: any) {
+      console.error('Error saving signature:', error);
+      showToast('error', error.response?.data?.error || 'Error al guardar la firma');
+    } finally {
+      setSavingSignature(false);
+    }
+  };
+
+  const handleRemoveSignature = async () => {
+    if (!confirm('¿Eliminar la firma digital guardada?')) return;
+    setRemovingSignature(true);
+    try {
+      const updated = await settingsApi.removeSignature();
+      setSettings(prev =>
+        prev
+          ? { ...prev, signatureUrl: updated.signatureUrl ?? null }
+          : prev
+      );
+      clearSignatureCache();
+      setSignatureMode('idle');
+      showToast('success', 'Firma digital eliminada');
+    } catch (error: any) {
+      console.error('Error removing signature:', error);
+      showToast('error', error.response?.data?.error || 'Error al eliminar la firma');
+    } finally {
+      setRemovingSignature(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -342,6 +393,90 @@ export default function GeneralSettings() {
             />
           </div>
         </div>
+      </Card>
+
+      {/* Firma Digital */}
+      <Card>
+        <div className="flex items-center gap-3 mb-2">
+          <PenLine className="w-5 h-5 text-primary-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Firma Digital</h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Se incluirá automáticamente al final de las cotizaciones y órdenes de compra que se envían.
+        </p>
+
+        {settings?.signatureUrl && signatureMode === 'idle' ? (
+          <div className="space-y-4">
+            <div className="border border-gray-200 rounded-lg bg-white p-4 flex flex-col items-center">
+              <img
+                src={`${settings.signatureUrl}?v=${Date.now()}`}
+                alt="Firma digital"
+                className="max-h-32 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <div className="w-48 border-t border-gray-300 mt-2" />
+              <p className="text-xs text-gray-500 mt-1">Firma Autorizada</p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSignatureMode('editing');
+                  setTimeout(() => signaturePadRef.current?.clear(), 0);
+                }}
+                disabled={savingSignature || removingSignature}
+              >
+                <PenLine className="w-4 h-4 mr-2" />
+                Reemplazar
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleRemoveSignature}
+                disabled={savingSignature || removingSignature}
+                isLoading={removingSignature}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <SignaturePad ref={signaturePadRef} />
+            <p className="text-xs text-gray-500">
+              Dibuja tu firma con el mouse o el dedo en el recuadro.
+            </p>
+            <div className="flex gap-2 justify-end">
+              {settings?.signatureUrl && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    signaturePadRef.current?.clear();
+                    setSignatureMode('idle');
+                  }}
+                  disabled={savingSignature}
+                >
+                  Cancelar
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                onClick={() => signaturePadRef.current?.clear()}
+                disabled={savingSignature}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Limpiar
+              </Button>
+              <Button onClick={handleSaveSignature} disabled={savingSignature} isLoading={savingSignature}>
+                <Save className="w-4 h-4 mr-2" />
+                Guardar Firma
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Configuración Financiera */}

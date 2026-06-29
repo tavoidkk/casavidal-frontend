@@ -21,6 +21,7 @@ import { staggerContainer, staggerItem } from '../utils/motion';
 import { generateInvoicePDF } from '../utils/generateInvoice';
 import { generatePurchaseOrderPDF } from '../utils/generatePurchaseOrderPDF';
 import { getLogoBase64 } from '../utils/pdfLogo';
+import { getSignatureBase64 } from '../utils/pdfSignature';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'danger' }> = {
   PENDIENTE: { label: 'Pendiente', color: 'warning' },
@@ -203,10 +204,13 @@ export default function SpecialOrdersPage() {
   };
 
   const handleDownloadPO = async (poId: string) => {
-    const logoBase64 = await getLogoBase64();
     try {
-      const po = await purchaseOrdersApi.getById(poId);
-      generatePurchaseOrderPDF(po, logoBase64 ?? undefined);
+      const [logoBase64, signatureBase64, po] = await Promise.all([
+        getLogoBase64(),
+        getSignatureBase64(),
+        purchaseOrdersApi.getById(poId),
+      ]);
+      generatePurchaseOrderPDF(po, logoBase64 ?? undefined, signatureBase64 ?? undefined);
     } catch {
       alert('Error al descargar la orden de compra');
     }

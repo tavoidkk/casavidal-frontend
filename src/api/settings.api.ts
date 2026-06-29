@@ -21,6 +21,7 @@ export const settingsApi = {
     return {
       ...settings,
       companyLogo: resolveLogoUrl(settings.companyLogo),
+      signatureUrl: resolveLogoUrl(settings.signatureUrl),
     };
   },
 
@@ -94,6 +95,28 @@ export const settingsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return resolveLogoUrl(response.data.data.url) || '';
+  },
+
+  /**
+   * Subir firma digital (PNG) de la compañía
+   * Solo accesible por ADMIN
+   * El backend ya persiste la URL en settings.
+   */
+  async uploadSignature(blob: Blob): Promise<string> {
+    const formData = new FormData();
+    formData.append('signature', blob, 'signature.png');
+    const response = await api.post<ApiResponse<{ url: string }>>('/settings/signature', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return resolveLogoUrl(response.data.data.url) || '';
+  },
+
+  /**
+   * Eliminar la firma digital guardada.
+   * Reutiliza updateSettings con signatureUrl: null.
+   */
+  async removeSignature(): Promise<Settings> {
+    return await this.updateSettings({ signatureUrl: null });
   },
 };
 

@@ -8,12 +8,13 @@ import {
   drawDividerLine,
   drawSectionNote,
   drawFooter,
+  drawSignature,
   PDF_COLORS,
 } from './pdfLayout';
 
 const EMPRESA_RIF = 'J-30999631-2';
 
-export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: string): void {
+export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: string, signatureBase64?: string): void {
   const pdf = createPDFDocument();
 
   const dateStr = new Date(order.createdAt).toLocaleDateString('es-VE', {
@@ -58,11 +59,16 @@ export function generatePurchaseOrderPDF(order: PurchaseOrder, logoBase64?: stri
 
   drawTotalBox(pdf, yPos, 'TOTAL:', `$${Number(order.total).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`);
 
+  if (signatureBase64) {
+    yPos += 12;
+    yPos = drawSignature(pdf, yPos, signatureBase64);
+  }
+
   if (order.notes) {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'italic');
     pdf.setTextColor(100, 116, 139);
-    pdf.text(`Notas: ${order.notes}`, 15, yPos + 12);
+    pdf.text(`Notas: ${order.notes}`, 15, yPos + 4);
   }
 
   drawFooter(pdf, 'Este documento es una orden de compra de control interno.');
